@@ -1,5 +1,6 @@
 import { http } from './http';
 import type {
+  AboutDto,
   ActiveProcessDto,
   ClassStatsDto,
   DiskSpaceCheckDto,
@@ -25,6 +26,11 @@ const encode = encodeURIComponent;
 
 /** Typed REST calls of the backend (see ProcessControlController, SnapshotController, ReportController). */
 export const api = {
+  about: {
+    get: () => http.get<AboutDto>('/api/about'),
+    license: () => http.text('/api/about/license'),
+    notice: () => http.text('/api/about/notice'),
+  },
   processes: {
     list: () => http.get<JvmProcessDto[]>('/api/processes'),
     connect: (pid: number) => http.post<JvmProcessDto>(`/api/processes/${pid}/connect`),

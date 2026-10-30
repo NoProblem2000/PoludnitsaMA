@@ -39,7 +39,7 @@ async function send(method: string, url: string, body?: unknown): Promise<Respon
     const form = body instanceof FormData;
     response = await fetch(url, {
       method,
-      headers: body === undefined || form ? { Accept: 'application/json' } : {
+      headers: body === undefined || form ? { Accept: 'application/json, text/plain;q=0.9' } : {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
@@ -70,6 +70,10 @@ function fileNameOf(response: Response, fallback: string): string {
 
 export const http = {
   get: <T>(url: string) => json<T>('GET', url),
+  /** GET of a plain-text resource (license texts). */
+  async text(url: string): Promise<string> {
+    return (await send('GET', url)).text();
+  },
   post: <T>(url: string, body?: unknown) => json<T>('POST', url, body ?? {}),
   put: <T>(url: string, body?: unknown) => json<T>('PUT', url, body ?? {}),
   del: <T>(url: string) => json<T>('DELETE', url),

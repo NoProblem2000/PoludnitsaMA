@@ -17,6 +17,42 @@
     <packaging>jar</packaging>
     <name>JVM Memory &amp; Leak Inspector</name>
     <description>Standalone JVM heap / leak inspector for WildFly and Hazelcast processes on the same host</description>
+    <url>https://github.com/NoProblem2000/PoludnitsaMA</url>
+    <inceptionYear>2026</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/NoProblem2000/PoludnitsaMA</url>
+        <connection>scm:git:https://github.com/NoProblem2000/PoludnitsaMA.git</connection>
+    </scm>
+
+    <!--
+      org-netbeans-lib-profiler RELEASE210 is published to Maven Central (Apache NetBeans releases since 11.x); it
+      resolves from there. The legacy Apache NetBeans repository is declared as a fallback only: it answers
+      401 Unauthorized today, and listed first it would be asked for every dependency before Central. Declaring
+      "central" explicitly first keeps Central the primary source.
+    -->
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>netbeans-release-repo</id>
+            <name>Apache NetBeans Maven Repository</name>
+            <url>https://bits.netbeans.org/maven2/</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
 
     <properties>
         <java.version>17</java.version>
@@ -32,6 +68,10 @@
         <frontend.dir>${project.basedir}/../frontend</frontend.dir>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <node.version>v20.18.0</node.version>
+
+        <!-- repository root: LICENSE, NOTICE, README.md, launch scripts -->
+        <root.dir>${project.basedir}/..</root.dir>
+        <release.archive>jvm-memory-inspector-release</release.archive>
     </properties>
 
     <dependencies>
@@ -208,6 +248,27 @@
                             </resources>
                         </configuration>
                     </execution>
+                    <!-- Apache License 2.0, section 4: every jar carries LICENSE and NOTICE (META-INF/, served by /api/about) -->
+                    <execution>
+                        <id>copy-legal-files</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${root.dir}</directory>
+                                    <includes>
+                                        <include>LICENSE</include>
+                                        <include>NOTICE</include>
+                                    </includes>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <!--
@@ -222,11 +283,112 @@
                         <manifestEntries>
                             <Add-Opens>jdk.attach/sun.tools.attach java.management/sun.management java.management/javax.management java.rmi/sun.rmi.transport java.base/java.nio java.base/sun.nio.ch</Add-Opens>
                             <Add-Exports>jdk.attach/sun.tools.attach java.management/sun.management</Add-Exports>
+                            <Bundle-License>Apache-2.0</Bundle-License>
                         </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          mvn clean package -Prelease
+            - production build of the UI (always; -DskipUi is rejected), embedded in target/classes/static
+            - META-INF/build-info.properties (version, build time) and git.properties (branch, commit), shown by
+              GET /api/about and the About dialog of the UI
+            - LICENSE and NOTICE in META-INF/ of the jar (base build)
+            - target/jvm-memory-inspector-release.zip: jar, start-inspector.sh/.bat, LICENSE, NOTICE, README.md
+        -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>enforce-release</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireProperty>
+                                            <property>skipUi</property>
+                                            <regex>false</regex>
+                                            <regexMessage>A release jar must contain the UI: do not pass -DskipUi with -Prelease.</regexMessage>
+                                        </requireProperty>
+                                    </rules>
+                                    <!-- missing LICENSE / NOTICE / README.md / launchers fail the assembly (src/assembly/release.xml) -->
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-info</id>
+                                <goals>
+                                    <goal>build-info</goal>
+                                </goals>
+                                <configuration>
+                                    <additionalProperties>
+                                        <license>Apache-2.0</license>
+                                        <java.target>${maven.compiler.release}</java.target>
+                                    </additionalProperties>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- version and default execution (revision -> target/classes/git.properties) come from the Spring Boot parent -->
+                    <plugin>
+                        <groupId>io.github.git-commit-id</groupId>
+                        <artifactId>git-commit-id-maven-plugin</artifactId>
+                        <configuration>
+                            <!-- the pom lives in backend/, the repository one level up -->
+                            <dotGitDirectory>${root.dir}/.git</dotGitDirectory>
+                            <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                            <offline>true</offline>
+                            <abbrevLength>8</abbrevLength>
+                            <includeOnlyProperties>
+                                <includeOnlyProperty>^git\.branch$</includeOnlyProperty>
+                                <includeOnlyProperty>^git\.commit\.id\.(abbrev|full)$</includeOnlyProperty>
+                                <includeOnlyProperty>^git\.commit\.time$</includeOnlyProperty>
+                                <includeOnlyProperty>^git\.dirty$</includeOnlyProperty>
+                                <includeOnlyProperty>^git\.tags$</includeOnlyProperty>
+                                <includeOnlyProperty>^git\.build\.version$</includeOnlyProperty>
+                            </includeOnlyProperties>
+                        </configuration>
+                    </plugin>
+                    <!-- after spring-boot:repackage (same phase, declared later), so the zip gets the executable jar -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>release-archive</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <finalName>${release.archive}</finalName>
+                                    <appendAssemblyId>false</appendAssemblyId>
+                                    <attach>false</attach>
+                                    <descriptors>
+                                        <descriptor>src/assembly/release.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

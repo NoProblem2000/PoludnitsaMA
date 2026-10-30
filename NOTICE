@@ -1,0 +1,74 @@
+JVM Memory & Leak Inspector
+Copyright 2026 The PoludnitsaMA contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+-------------------------------------------------------------------------------
+Bundled third-party software
+-------------------------------------------------------------------------------
+
+The executable jar and the web UI it serves contain the following open-source
+components. Each remains under its own license; the license texts are
+available at the URLs given.
+
+Backend (Java)
+
+  Spring Boot 3.5 (Spring Framework, Spring WebSocket, embedded Apache Tomcat)
+    Copyright (c) 2012-2025 VMware, Inc. and the Spring contributors
+    Apache License 2.0 - https://spring.io/projects/spring-boot
+
+  Apache NetBeans Profiler API (org.netbeans.modules:org-netbeans-lib-profiler)
+    Apache NetBeans
+    Copyright 2017-2024 The Apache Software Foundation
+    Apache License 2.0 - https://netbeans.apache.org/
+
+  Apache Tomcat (embedded, via Spring Boot)
+    Copyright 1999-2025 The Apache Software Foundation
+    Apache License 2.0 - https://tomcat.apache.org/
+
+  Jackson (jackson-databind, jackson-datatype-jsr310, jackson-datatype-jdk8)
+    Copyright (c) 2007- Tatu Saloranta and FasterXML contributors
+    Apache License 2.0 - https://github.com/FasterXML/jackson
+
+  Hibernate Validator (via spring-boot-starter-validation)
+    Copyright Red Hat, Inc. and Hibernate Validator contributors
+    Apache License 2.0 - https://hibernate.org/validator/
+
+Frontend (web UI)
+
+  Apache ECharts 5
+    Copyright 2017-2024 The Apache Software Foundation
+    Apache License 2.0 - https://echarts.apache.org/
+
+  ZRender (rendering engine of Apache ECharts)
+    Copyright (c) 2017, Baidu Inc.
+    BSD 3-Clause License - https://github.com/ecomfe/zrender
+
+  React 18 and React DOM
+    Copyright (c) Meta Platforms, Inc. and affiliates
+    MIT License - https://react.dev/
+
+  Zustand
+    Copyright (c) 2019 Paul Henschel
+    MIT License - https://github.com/pmndrs/zustand
+
+  TanStack Virtual (@tanstack/react-virtual)
+    Copyright (c) 2021-present Tanner Linsley
+    MIT License - https://tanstack.com/virtual
+
+  Lucide (lucide-react)
+    Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as
+    part of Feather (MIT). All other copyright (c) for Lucide are held by
+    Lucide Contributors 2022.
+    ISC License - https://lucide.dev/
+
+  clsx
+    Copyright (c) Luke Edwards
+    MIT License - https://github.com/lukeed/clsx
+
+  Tailwind CSS (build time; generated CSS is bundled)
+    Copyright (c) Tailwind Labs, Inc.
+    MIT License - https://tailwindcss.com/

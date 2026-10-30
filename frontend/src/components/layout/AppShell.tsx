@@ -7,6 +7,7 @@ import { ReportModal } from '@/features/reports/ReportModal';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { Sidebar } from './Sidebar';
 import { SnapshotTimeline } from './SnapshotTimeline';
+import { StatusBar } from './StatusBar';
 import { ToastStack } from './ToastStack';
 import { TopToolbar } from './TopToolbar';
 
@@ -42,6 +43,7 @@ export function AppShell() {
         </main>
       </div>
       <SnapshotTimeline />
+      <StatusBar />
       <ReportModal />
       <ToastStack />
     </div>

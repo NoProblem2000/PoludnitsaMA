@@ -9,6 +9,9 @@ PoludnitsaMA/
 ├── frontend/           React 18 + TypeScript + Vite + Tailwind
 ├── start-inspector.sh  запуск на Linux (JDK 17+, -Xms256m -Xmx1024m, --add-opens), проверки JDK/jdk.attach
 ├── start-inspector.bat то же для Windows
+├── LICENSE, NOTICE     Apache License 2.0 и атрибуции встроенных библиотек (кладутся в META-INF/ jar)
+├── README.md           требования, сборка из ветки release, флаги запуска
+├── .gitlab-ci.yml      релизный пайплайн ветки release (shell runner, без Docker)
 └── ARCHITECTURE.md
 ```
 
@@ -142,6 +145,18 @@ src/
   (подсистема → класс → объект → вложенные доминаторы) не считает байты дважды. Остаток кучи — серый сектор.
 * **Snapshot Comparison** — `GET /api/snapshots/diff?includeShrinking=true&limit=5000`; в офлайн-отчёте тот же
   алгоритм (`localDiff.ts`, зеркало `SnapshotDiffService`) считается в браузере для любой пары снапшотов.
+
+### Релизный контур
+* `mvn clean package -Prelease` (профиль `release` в `backend/pom.xml`): UI всегда собирается (`-DskipUi`
+  запрещён enforcer'ом), `spring-boot:build-info` → `META-INF/build-info.properties`, `git-commit-id-maven-plugin`
+  → `git.properties` (ветка, коммит; `.git` на уровень выше `backend/`), `maven-assembly-plugin`
+  (`src/assembly/release.xml`) → `target/jvm-memory-inspector-release.zip`.
+* `GET /api/about` (`AboutController`) читает `BuildProperties` / `GitProperties`; без `-Prelease` версия берётся
+  из манифеста. `GET /api/about/license`, `/api/about/notice` отдают `META-INF/LICENSE` и `NOTICE` из jar.
+  В UI — статус-бар внизу (версия, коммит, бейдж *Apache 2.0 License*) и `AboutLicenseModal`.
+* Зависимость `org-netbeans-lib-profiler` берётся из Maven Central; репозиторий `bits.netbeans.org/maven2`
+  объявлен запасным после явно объявленного `central` (сейчас он отвечает 401, а первым в списке его спрашивали
+  бы о каждой зависимости).
 
 ## 4. Цветовая система (Tailwind `kraken.*`)
 

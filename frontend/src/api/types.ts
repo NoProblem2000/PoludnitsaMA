@@ -480,6 +480,24 @@ export interface HeapDumpRequestDto {
   liveObjectsOnly: boolean;
 }
 
+export interface AboutDto {
+  name: string;
+  /** build-info.properties (release builds), else the jar manifest, else "dev" */
+  version: string;
+  /** ISO-8601 instant; release builds only */
+  buildTime: string | null;
+  gitBranch: string | null;
+  gitCommitId: string | null;
+  /** ISO-8601 instant */
+  gitCommitTime: string | null;
+  gitDirty: boolean;
+  /** SPDX id, "Apache-2.0" */
+  license: string;
+  licenseUrl: string;
+  /** Java version of the analyzer JVM */
+  runtimeJava: string;
+}
+
 export interface ApiErrorDto {
   /** ISO-8601 instant */
   timestamp: string;

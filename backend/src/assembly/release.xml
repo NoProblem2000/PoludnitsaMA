@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  target/jvm-memory-inspector-release.zip, unpacked:
+
+    jvm-memory-inspector-<version>/
+      jvm-leak-inspector.jar     executable Spring Boot jar with the UI, LICENSE and NOTICE in META-INF/
+      start-inspector.sh         Linux launcher (LF, mode 755)
+      start-inspector.bat        Windows launcher (CRLF)
+      LICENSE, NOTICE, README.md
+
+  The launchers find the jar next to themselves.
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>release</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>jvm-memory-inspector-${project.version}</baseDirectory>
+
+    <files>
+        <file>
+            <source>${project.build.directory}/${project.build.finalName}.jar</source>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>${root.dir}/start-inspector.sh</source>
+            <outputDirectory>/</outputDirectory>
+            <lineEnding>unix</lineEnding>
+            <fileMode>0755</fileMode>
+        </file>
+        <file>
+            <source>${root.dir}/start-inspector.bat</source>
+            <outputDirectory>/</outputDirectory>
+            <lineEnding>dos</lineEnding>
+            <fileMode>0644</fileMode>
+        </file>
+        <!-- single <file> entries, not a fileSet: a missing one fails the build instead of being skipped -->
+        <file>
+            <source>${root.dir}/LICENSE</source>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>${root.dir}/NOTICE</source>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>${root.dir}/README.md</source>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+    </files>
+</assembly>

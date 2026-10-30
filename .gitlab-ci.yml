@@ -1,0 +1,150 @@
+# JVM Memory & Leak Inspector: release pipeline.
+#
+# Runs only for the `release` branch (a push or a merged MR into it) on a classic GitLab runner with the
+# shell executor: bare metal or a VM, no Docker. The runner host needs:
+#   - JDK 17+ (java and jdk.attach module; JAVA_HOME set or java on PATH), Maven 3.8+ on PATH
+#   - bash, git, unzip; internet access to Maven Central and nodejs.org (Node 20 is installed into
+#     backend/target/node by the build itself, nothing to install by hand)
+#   - Linux: the integration tests start child JVMs and attach to them, so run the runner service as a normal
+#     user (not root) and keep /tmp writable for the attach sockets.
+# Register the runner with the tags below (or change them):  gitlab-runner register --executor shell --tag-list "shell,jdk17"
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+
+stages:
+  - validate
+  - release
+
+variables:
+  # git-commit-id-maven-plugin needs the full history for branch / commit info, not a shallow clone
+  GIT_DEPTH: "0"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Djava.awt.headless=true"
+  MAVEN_CLI_OPTS: "-B -ntp -e"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+default:
+  tags:
+    - shell
+    - jdk17
+  # Maven repository (also holds the Node download of frontend-maven-plugin) and the npm cache
+  cache:
+    key: "inspector-$CI_COMMIT_REF_SLUG"
+    paths:
+      - .m2/repository/
+      - .npm/
+  before_script:
+    - java -version
+    - mvn -v
+
+# ---------------------------------------------------------------------------------------------------------------
+# validate & test
+# ---------------------------------------------------------------------------------------------------------------
+
+license-check:
+  stage: validate
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+  script:
+    - test -s LICENSE || { echo "LICENSE is missing"; exit 1; }
+    - test -s NOTICE  || { echo "NOTICE is missing"; exit 1; }
+    - grep -q "Apache License" LICENSE && grep -q "Version 2.0, January 2004" LICENSE
+    - grep -q "<name>Apache License, Version 2.0</name>" backend/pom.xml
+    # every third-party library named in NOTICE must also be listed in the About dialog, and the other way round
+    - |
+      for lib in "Spring Boot" "NetBeans Profiler" "ECharts" "React"; do
+        grep -q "$lib" NOTICE || { echo "NOTICE does not mention $lib"; exit 1; }
+        grep -q "$lib" frontend/src/features/about/AboutLicenseModal.tsx || { echo "About dialog does not mention $lib"; exit 1; }
+      done
+    - echo "License files OK"
+
+test:
+  stage: validate
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+  script:
+    # backend compile + unit/integration tests + frontend/backend contract test; the UI itself is built by the release job
+    - cd backend
+    - mvn $MAVEN_CLI_OPTS clean verify -DskipUi
+  artifacts:
+    when: always
+    expire_in: 14 days
+    reports:
+      junit: backend/target/surefire-reports/TEST-*.xml
+
+version:
+  stage: validate
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+  script:
+    - cd backend
+    - APP_VERSION=$(mvn $MAVEN_CLI_OPTS -q help:evaluate -Dexpression=project.version -DforceStdout)
+    - test -n "$APP_VERSION"
+    - echo "APP_VERSION=$APP_VERSION" > ../release.env
+    - echo "RELEASE_TAG=v${APP_VERSION%-SNAPSHOT}" >> ../release.env
+    - cat ../release.env
+  artifacts:
+    reports:
+      dotenv: release.env
+
+# ---------------------------------------------------------------------------------------------------------------
+# release build
+# ---------------------------------------------------------------------------------------------------------------
+
+release-build:
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+  needs:
+    - job: license-check
+    - job: test
+      artifacts: false
+    - job: version
+      artifacts: true
+  script:
+    - cd backend
+    # tests already ran in the validate stage
+    - mvn $MAVEN_CLI_OPTS clean package -Prelease -DskipTests
+    - unzip -l target/jvm-memory-inspector-release.zip
+    - unzip -p target/jvm-leak-inspector.jar META-INF/build-info.properties
+    - unzip -p target/jvm-leak-inspector.jar BOOT-INF/classes/git.properties
+    - unzip -l target/jvm-leak-inspector.jar | grep -E "META-INF/(LICENSE|NOTICE)$|static/index.html$"
+    - sha256sum target/jvm-memory-inspector-release.zip target/jvm-leak-inspector.jar | tee target/SHA256SUMS
+  artifacts:
+    name: "jvm-memory-inspector-$RELEASE_TAG-$CI_COMMIT_SHORT_SHA"
+    expire_in: never
+    paths:
+      - backend/target/jvm-memory-inspector-release.zip
+      - backend/target/*.jar
+      - backend/target/SHA256SUMS
+
+# Optional: a GitLab Release with the version tag, linking the artifacts above. Needs `release-cli` on the runner
+# host (https://gitlab.com/gitlab-org/release-cli) and a tag that does not exist yet; started by hand.
+gitlab-release:
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+      when: manual
+      allow_failure: true
+  needs:
+    - job: release-build
+      artifacts: false
+    - job: version
+      artifacts: true
+  before_script: []
+  script:
+    - echo "Creating release $RELEASE_TAG for $CI_COMMIT_SHA"
+  release:
+    tag_name: "$RELEASE_TAG"
+    ref: "$CI_COMMIT_SHA"
+    name: "JVM Memory & Leak Inspector $RELEASE_TAG"
+    description: "Release build of $CI_COMMIT_SHORT_SHA from branch release. Download: jvm-memory-inspector-release.zip (jar, start-inspector.sh/.bat, LICENSE, NOTICE, README.md)."
+    assets:
+      links:
+        - name: "jvm-memory-inspector-release.zip"
+          url: "$CI_PROJECT_URL/-/jobs/artifacts/release/raw/backend/target/jvm-memory-inspector-release.zip?job=release-build"
+          link_type: package
+        - name: "jvm-leak-inspector.jar"
+          url: "$CI_PROJECT_URL/-/jobs/artifacts/release/raw/backend/target/jvm-leak-inspector.jar?job=release-build"
+          link_type: package
