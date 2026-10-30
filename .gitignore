@@ -1,0 +1,18 @@
+# Backend
+backend/target/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Heap dumps and NetBeans profiler indexes
+*.hprof
+*.hprof.*
+*.jfr
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

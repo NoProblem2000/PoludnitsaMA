@@ -1,0 +1,21 @@
+server:
+  # Bind to loopback only: the inspector can dump heaps of production processes.
+  address: 127.0.0.1
+  port: 8080
+
+spring:
+  application:
+    name: jvm-leak-inspector
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      # Allow uploading existing .hprof files for offline analysis.
+      max-file-size: -1
+      max-request-size: -1
+
+logging:
+  level:
+    com.poludnitsa.inspector: INFO

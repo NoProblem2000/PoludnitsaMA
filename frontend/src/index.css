@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-kraken-bg font-sans text-sm text-kraken-text antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent-cyan/30;
+  }
+
+  /* Thin dark scrollbars for virtualized tables */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.kraken.border') transparent;
+  }
+}
