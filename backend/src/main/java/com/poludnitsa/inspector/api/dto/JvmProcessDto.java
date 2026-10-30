@@ -17,6 +17,7 @@ import java.util.List;
  * @param connectionSource attach by PID or remote JMX
  * @param connectionState  current state of the JMX connection
  * @param remoteEndpoint   JMX service URL for {@link ConnectionSource#REMOTE_JMX}, otherwise {@code null}
+ * @param startTimeEpochMs when the process started (uptime in the UI), {@code null} if unknown
  */
 public record JvmProcessDto(
         long pid,
@@ -30,7 +31,8 @@ public record JvmProcessDto(
         String attachError,
         ConnectionSource connectionSource,
         ConnectionState connectionState,
-        String remoteEndpoint
+        String remoteEndpoint,
+        Long startTimeEpochMs
 ) {
     public JvmProcessDto {
         jvmFlags = jvmFlags == null ? List.of() : List.copyOf(jvmFlags);

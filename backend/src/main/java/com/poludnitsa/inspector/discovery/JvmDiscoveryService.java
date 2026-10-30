@@ -286,6 +286,7 @@ public class JvmDiscoveryService implements DisposableBean {
         Long heapMax = null;
         List<String> flags = probe.jvmFlags();
         String version = probe.jvmVersion();
+        Long startTime = probe.startInstant() == null ? null : probe.startInstant().toEpochMilli();
         if (connections.peek(pid).isPresent()) {
             try {
                 LiveFacts live = connections.call(pid, (connection, metadata) -> new LiveFacts(
@@ -297,6 +298,9 @@ public class JvmDiscoveryService implements DisposableBean {
                 }
                 flags = live.metadata().inputArguments();
                 version = version != null ? version : live.metadata().vmVersion();
+                if (startTime == null && live.metadata().startTimeEpochMs() > 0) {
+                    startTime = live.metadata().startTimeEpochMs();
+                }
             } catch (InspectorException e) {
                 log.debug("Heap read for PID {} failed: {}", pid, e.getMessage());
             }
@@ -309,6 +313,6 @@ public class JvmDiscoveryService implements DisposableBean {
         return new JvmProcessDto(pid, probe.displayName(), probe.type(), heapUsed, heapMax, flags, version,
                 probe.attachable(), error,
                 remote.isPresent() ? ConnectionSource.REMOTE_JMX : ConnectionSource.LOCAL_ATTACH,
-                state, remote.map(TargetEndpoint.RemoteJmx::serviceUrl).orElse(null));
+                state, remote.map(TargetEndpoint.RemoteJmx::serviceUrl).orElse(null), startTime);
     }
 }

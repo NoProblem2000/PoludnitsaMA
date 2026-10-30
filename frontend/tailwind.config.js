@@ -1,6 +1,8 @@
+import { fileURLToPath } from 'node:url';
+
 /** @type {import('tailwindcss').Config} */
 
-// GitKraken-style palette. The ECharts theme (src/theme/echartsTheme.ts) must use the same values.
+// GitKraken-style palette. src/theme/palette.ts (ECharts, inline styles) must use the same values.
 const kraken = {
   bg: '#1b1d23',
   panel: '#232730',
@@ -16,8 +18,11 @@ const accent = {
   violet: '#b388ff',
 };
 
+// Content globs relative to this file, not to the process working directory (globs need forward slashes).
+const here = fileURLToPath(new URL('.', import.meta.url)).replace(/\\/g, '/');
+
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: [`${here}index.html`, `${here}src/**/*.{ts,tsx}`],
   darkMode: 'class',
   theme: {
     extend: {

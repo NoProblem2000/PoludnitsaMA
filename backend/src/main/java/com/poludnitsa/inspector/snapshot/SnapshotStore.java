@@ -124,14 +124,14 @@ public class SnapshotStore {
                 .toList();
     }
 
-    /** Marks the snapshot READY and persists its summary. */
+    /** Persists the summary first, then marks the snapshot READY: a client that sees READY finds it on disk. */
     public void complete(SnapshotRecord record) {
-        record.ready();
         try {
             persist(record);
         } catch (IOException e) {
             log.warn("Could not persist summary of snapshot {}: {}", record.id(), e.toString());
         }
+        record.ready();
     }
 
     public void delete(String id) {
@@ -161,7 +161,7 @@ public class SnapshotStore {
         Path temporary = summariesDir.resolve(record.id() + SUFFIX + ".tmp");
         try (OutputStream out = Files.newOutputStream(temporary);
              GZIPOutputStream gzip = new GZIPOutputStream(out, 64 * 1024)) {
-            mapper.writeValue(gzip, new PersistedSnapshot(FORMAT_VERSION, record.toSummary(), record.data()));
+            mapper.writeValue(gzip, new PersistedSnapshot(FORMAT_VERSION, record.toSummaryAsReady(), record.data()));
         } catch (IOException | RuntimeException e) {
             Files.deleteIfExists(temporary);
             throw e;

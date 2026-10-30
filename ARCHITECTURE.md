@@ -94,31 +94,30 @@ src/
 ├── main.tsx, App.tsx, index.css
 ├── api/
 │   ├── types.ts            # TS-зеркало Java DTO (1:1 с api.dto)
-│   ├── http.ts             # fetch-обёртка, ApiError
-│   ├── liveSocket.ts       # WebSocket /ws/live: subscribe/unsubscribe, авто-реконнект
-│   └── endpoints/          # processes.ts, snapshots.ts, heap.ts, inspections.ts, reports.ts
-├── store/                  # Zustand
-│   ├── processStore.ts     # список JVM, выбранный PID
-│   ├── liveStore.ts        # ring-buffer метрик для графиков (без ре-рендера всего дерева)
-│   ├── snapshotStore.ts    # снапшоты, прогресс индексации
-│   └── inspectionStore.ts  # findings, фильтры по severity/category
-├── theme/
-│   └── echartsTheme.ts     # тема ECharts в палитре GitKraken
+│   ├── http.ts             # fetch-обёртка, ApiError из ApiErrorDto, скачивание файлов
+│   ├── endpoints.ts        # типизированные вызовы REST (processes, snapshots, reports), постраничные классы
+│   ├── liveSocket.ts       # WebSocket /ws/live: subscribe/unsubscribe, ping, реконнект с backoff
+│   └── offlineReport.ts    # чтение .json.gz/.json в браузере (DecompressionStream), без бэкенда
+├── store/
+│   ├── useInspectorStore.ts  # Zustand: процессы, live/offline режим, поток, снапшоты, findings, действия тулбара
+│   ├── liveSeries.ts       # кольцевой буфер 300 с (ChartPoint, GcMarker) из payload/истории
+│   └── radarRows.ts        # слияние live-подозреваемых, классов гистограммы и offline-diff в строки радара
+├── theme/palette.ts        # палитра GitKraken для ECharts/inline-стилей, градиент score emerald→amber→coral
 ├── components/
-│   ├── layout/             # AppShell, Sidebar, TopBar, StatusBar
-│   ├── common/             # Card, Badge(Severity), ByteSize, EmptyState, Spinner, SplitPane
-│   ├── charts/             # EChart (базовая обёртка с resize/dispose), HeapTimeline, GcPauseChart, RetainedSunburst
-│   └── tables/             # VirtualTable (@tanstack/react-virtual), колонки, сортировка
+│   ├── layout/             # AppShell, TopToolbar, ProcessSelector, Sidebar, SnapshotTimeline, ToastStack
+│   ├── common/             # Badge, Tooltip, ToolbarButton, ConfirmDialog, EmptyState, ScoreBar
+│   └── charts/EChart.tsx   # модульный ECharts (core + нужные части), resize/dispose, replaceMerge серий
 ├── features/
-│   ├── processes/          # ProcessList, ProcessCard, AttachHint
-│   ├── live/               # LiveDashboard, PoolGauges, GrowingClassesTable
-│   ├── snapshots/          # TakeSnapshotDialog (live/non-live, disk check), SnapshotList, Upload
-│   ├── heap/               # DominatorTree, InstancesView, GcRootPathView
-│   ├── inspections/        # FindingsList, FindingDetails (why + fix snippet)
-│   └── reports/            # Export/Import
-├── hooks/                  # useStompTopic, useInterval, useElementSize
-└── utils/                  # formatBytes, formatDuration, packageCategoryColor
+│   ├── live/               # LiveDashboardView, StatCards, MemoryPoolsChart, LeakRadarTable (@tanstack/react-virtual)
+│   ├── heuristics/         # HeuristicsView (шаг 6)
+│   ├── heap/               # DominatorsView (шаг 6)
+│   └── diff/               # DiffView (шаг 6)
+├── hooks/                  # useNow, useClickOutside
+└── utils/                  # format (байты, скорости, аптайм), categories (группы, цвета)
 ```
+
+Разработка: `npm run dev` (Vite на 5173, проксирует `/api` и `/ws` на бэкенд 8080). Node можно не ставить:
+`mvn -Pbundle-ui package` скачивает Node 20 в `backend/target/node`, собирает UI и кладёт его в jar.
 
 ## 4. Цветовая система (Tailwind `kraken.*`)
 

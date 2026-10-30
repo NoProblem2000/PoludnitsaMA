@@ -24,9 +24,16 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
-        manualChunks: {
-          echarts: ['echarts'],
-          react: ['react', 'react-dom'],
+        // Function form: the object form would pull the whole `echarts` entry into the bundle,
+        // although only the modules imported through `echarts/core` are used.
+        manualChunks(id) {
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) {
+            return 'echarts';
+          }
+          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) {
+            return 'react';
+          }
+          return undefined;
         },
       },
     },

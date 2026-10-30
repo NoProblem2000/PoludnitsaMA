@@ -63,6 +63,8 @@ export interface JvmProcessDto {
   connectionSource: ConnectionSource;
   connectionState: ConnectionState;
   remoteEndpoint: string | null;
+  /** process start, for the uptime display */
+  startTimeEpochMs: number | null;
 }
 
 /** Bytes; -1 means undefined. */

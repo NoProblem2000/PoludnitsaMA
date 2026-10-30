@@ -16,3 +16,6 @@ frontend/dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local tool configuration (absolute paths of one machine)
+.claude/

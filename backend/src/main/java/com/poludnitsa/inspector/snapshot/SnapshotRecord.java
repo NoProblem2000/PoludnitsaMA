@@ -150,6 +150,23 @@ public final class SnapshotRecord {
         data = null;
     }
 
+    /** The summary this snapshot will have once READY, for persisting it before the status becomes visible. */
+    synchronized SnapshotSummaryDto toSummaryAsReady() {
+        SnapshotStatus currentStatus = status;
+        String currentMessage = progressMessage;
+        int currentPercent = progressPercent;
+        IntSupplier currentSource = progressSource;
+        ready();
+        try {
+            return toSummary();
+        } finally {
+            status = currentStatus;
+            progressMessage = currentMessage;
+            progressPercent = currentPercent;
+            progressSource = currentSource;
+        }
+    }
+
     public synchronized SnapshotSummaryDto toSummary() {
         int percent = progressPercent;
         if (progressSource != null) {
