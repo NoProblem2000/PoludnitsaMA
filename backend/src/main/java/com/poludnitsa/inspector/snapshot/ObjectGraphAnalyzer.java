@@ -1,0 +1,204 @@
+package com.poludnitsa.inspector.snapshot;
+
+import com.poludnitsa.inspector.api.dto.ClassSampleDto;
+import com.poludnitsa.inspector.api.dto.ClassStatsDto;
+import com.poludnitsa.inspector.api.dto.DominatorNodeDto;
+import com.poludnitsa.inspector.api.dto.MemoryGroup;
+import com.poludnitsa.inspector.api.dto.PackageCategory;
+import com.poludnitsa.inspector.api.dto.SnapshotStatus;
+import com.poludnitsa.inspector.common.JvmTypeNames;
+import com.poludnitsa.inspector.common.PackageCategorizer;
+import com.poludnitsa.inspector.config.InspectorProperties;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import javax.swing.BoundedRangeModel;
+import org.netbeans.lib.profiler.heap.Heap;
+import org.netbeans.lib.profiler.heap.HeapFactory;
+import org.netbeans.lib.profiler.heap.HeapProgress;
+import org.netbeans.lib.profiler.heap.HeapSummary;
+import org.netbeans.lib.profiler.heap.Instance;
+import org.netbeans.lib.profiler.heap.JavaClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+/**
+ * Analyses one .hprof file with the NetBeans profiler lib.
+ *
+ * <p>{@link HeapFactory#createHeap(java.io.File)} never loads the dump into the inspector's heap: it memory-maps the
+ * file and builds its indexes as files in {@code <dump>.nbcache/}. On top of that it computes the dominator tree
+ * (retained sizes), the top objects and classes by retained size, and shortest GC root paths for them.
+ *
+ * <p>The returned {@link SnapshotData} holds no reference into the NetBeans heap, so the heap and its mapped
+ * buffers become garbage as soon as this method returns and the files can be deleted.
+ */
+@Component
+public class ObjectGraphAnalyzer {
+
+    private static final Logger log = LoggerFactory.getLogger(ObjectGraphAnalyzer.class);
+
+    private final InspectorProperties.Snapshots props;
+
+    public ObjectGraphAnalyzer(InspectorProperties properties) {
+        this.props = properties.snapshots();
+    }
+
+    /** Runs on the calling thread; {@code record} receives phases and live progress. */
+    public SnapshotData analyze(Path hprof, SnapshotRecord record) throws IOException {
+        // NetBeans reports progress through a model bound to the thread that does the work.
+        BoundedRangeModel progress = HeapProgress.getProgress();
+        record.progressSource(() -> percent(progress));
+        try {
+            long started = System.nanoTime();
+            record.phase(SnapshotStatus.INDEXING, "Checking heap dump consistency");
+            HprofSanitizer.Result repair = HprofSanitizer.repairDanglingStickyClassRoots(hprof);
+            if (repair.danglingRepaired() > 0) {
+                log.info("Repaired {} of {} sticky-class GC roots without class dump in {}",
+                        repair.danglingRepaired(), repair.stickyClassRoots(), hprof);
+            } else if (!repair.scanned()) {
+                log.warn("Unknown HPROF record in {}; analysing it unmodified", hprof);
+            }
+            record.phase(SnapshotStatus.INDEXING, "Indexing heap dump (on-disk NetBeans indexes)");
+            Heap heap = HeapFactory.createHeap(hprof.toFile());
+            HeapSummary summary = heap.getSummary();
+            long totalBytes = summary.getTotalLiveBytes();
+            long totalInstances = summary.getTotalLiveInstances();
+            int gcRoots = heap.getGCRoots().size();
+            record.indexed(millisSince(started));
+
+            long analysisStarted = System.nanoTime();
+            record.phase(SnapshotStatus.ANALYZING, "Computing dominator tree and retained sizes");
+            List<Instance> biggest = new ArrayList<>();
+            for (Object instance : heap.getBiggestObjectsByRetainedSize(props.topDominators())) {
+                biggest.add((Instance) instance);
+            }
+
+            record.phase(SnapshotStatus.ANALYZING, "Aggregating retained size by class");
+            Map<String, ClassAccumulator> classes = aggregateClasses(heap);
+
+            record.phase(SnapshotStatus.ANALYZING, "Resolving shortest paths to GC roots");
+            GcRootPathResolver paths = new GcRootPathResolver(heap, props.maxPathDepth());
+            List<DominatorNodeDto> dominators = new ArrayList<>(biggest.size());
+            Map<String, Instance> biggestByClass = new HashMap<>();
+            for (Instance instance : biggest) {
+                DominatorNodeDto node = dominator(instance, paths, totalBytes);
+                dominators.add(node);
+                biggestByClass.putIfAbsent(node.className(), instance);
+            }
+
+            List<ClassAccumulator> ranked = new ArrayList<>(classes.values());
+            ranked.sort(Comparator.comparingLong((ClassAccumulator c) -> c.retained).reversed()
+                    .thenComparing(c -> c.name));
+            int withSample = Math.min(props.classesWithSamplePath(), ranked.size());
+            for (int i = 0; i < withSample; i++) {
+                ClassAccumulator accumulator = ranked.get(i);
+                Instance representative = biggestByClass.get(accumulator.name);
+                if (representative == null) {
+                    representative = largestInstance(accumulator);
+                }
+                if (representative != null) {
+                    GcRootPathResolver.ResolvedPath path = paths.resolve(representative);
+                    accumulator.sample = new ClassSampleDto(representative.getInstanceId(),
+                            representative.getRetainedSize(), path.steps(), path.text());
+                }
+            }
+
+            List<ClassStatsDto> classStats = new ArrayList<>(ranked.size());
+            for (ClassAccumulator accumulator : ranked) {
+                classStats.add(accumulator.toDto());
+            }
+            SnapshotData data = new SnapshotData(totalInstances, classStats.size(), totalBytes, gcRoots, true,
+                    classStats, dominators, SnapshotDataFactory.groups(classStats, totalBytes));
+            record.analysed(millisSince(analysisStarted), data);
+            log.info("Analysed {}: {} objects, {} classes, {} bytes, {} GC roots", hprof, totalInstances,
+                    classStats.size(), totalBytes, gcRoots);
+            return data;
+        } finally {
+            record.progressSource(null);
+        }
+    }
+
+    private static Map<String, ClassAccumulator> aggregateClasses(Heap heap) {
+        Map<String, ClassAccumulator> byName = new HashMap<>();
+        for (Object element : heap.getAllClasses()) {
+            JavaClass javaClass = (JavaClass) element;
+            int count = javaClass.getInstancesCount();
+            if (count == 0) {
+                continue;
+            }
+            String name = JvmTypeNames.toJavaName(javaClass.getName());
+            ClassAccumulator accumulator = byName.computeIfAbsent(name, ClassAccumulator::new);
+            accumulator.instances += count;
+            accumulator.shallow += javaClass.getAllInstancesSize();
+            accumulator.retained += javaClass.getRetainedSizeByClass();
+            accumulator.definitions.add(javaClass);
+        }
+        return byName;
+    }
+
+    private Instance largestInstance(ClassAccumulator accumulator) {
+        Instance largest = null;
+        long largestSize = -1;
+        int scanned = 0;
+        for (JavaClass definition : accumulator.definitions) {
+            Iterator<?> instances = definition.getInstancesIterator();
+            while (instances.hasNext() && scanned < props.maxInstancesScannedPerClass()) {
+                Instance instance = (Instance) instances.next();
+                scanned++;
+                long size = instance.getRetainedSize();
+                if (size > largestSize) {
+                    largest = instance;
+                    largestSize = size;
+                }
+            }
+        }
+        return largest;
+    }
+
+    private static DominatorNodeDto dominator(Instance instance, GcRootPathResolver paths, long totalBytes) {
+        GcRootPathResolver.ResolvedPath path = paths.resolve(instance);
+        String className = path.steps().isEmpty()
+                ? JvmTypeNames.toJavaName(instance.getJavaClass().getName())
+                : path.steps().get(path.steps().size() - 1).className();
+        String categorized = className.startsWith("class ") ? "java.lang.Class" : className;
+        PackageCategory category = PackageCategorizer.categorize(categorized);
+        long retained = instance.getRetainedSize();
+        return new DominatorNodeDto(instance.getInstanceId(), className, category, MemoryGroup.of(category),
+                instance.getSize(), retained, totalBytes > 0 ? 100.0 * retained / totalBytes : 0,
+                path.steps(), path.text(), path.rootKind());
+    }
+
+    private static int percent(BoundedRangeModel model) {
+        int range = model.getMaximum() - model.getMinimum();
+        return range <= 0 ? 0 : (int) (100L * (model.getValue() - model.getMinimum()) / range);
+    }
+
+    private static long millisSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private static final class ClassAccumulator {
+        final String name;
+        final List<JavaClass> definitions = new ArrayList<>(1);
+        long instances;
+        long shallow;
+        long retained;
+        ClassSampleDto sample;
+
+        ClassAccumulator(String name) {
+            this.name = name;
+        }
+
+        ClassStatsDto toDto() {
+            PackageCategory category = PackageCategorizer.categorize(name);
+            return new ClassStatsDto(name, category, MemoryGroup.of(category), instances, shallow, retained,
+                    definitions.size(), sample);
+        }
+    }
+}

@@ -39,7 +39,16 @@ export type MemoryPoolKind =
 
 export type GcGeneration = 'YOUNG' | 'OLD' | 'CONCURRENT' | 'UNKNOWN';
 
-export type SnapshotStatus = 'DUMPING' | 'INDEXING' | 'READY' | 'FAILED';
+export type SnapshotStatus = 'DUMPING' | 'INDEXING' | 'ANALYZING' | 'READY' | 'FAILED';
+
+export type SnapshotKind = 'LIVE_HISTOGRAM' | 'DEEP';
+
+export type MemoryGroup =
+  | 'USER_BUSINESS_CODE'
+  | 'JAKARTA_WILDFLY_INTERNAL'
+  | 'HAZELCAST_CLIENT'
+  | 'JDK_CORE'
+  | 'THIRD_PARTY_LIBRARY';
 
 export interface JvmProcessDto {
   pid: number;
@@ -221,22 +230,110 @@ export interface GcTriggerResultDto {
 
 export interface SnapshotSummaryDto {
   snapshotId: string;
-  sourcePid: number | null;
+  kind: SnapshotKind;
+  sourcePid: number;
   sourceDisplayName: string;
-  sourceProcessType: ProcessType | null;
-  hprofPath: string;
-  fileSizeBytes: number;
+  sourceProcessType: ProcessType;
   /** ISO-8601 instant */
   createdAt: string;
   liveObjectsOnly: boolean;
   status: SnapshotStatus;
-  indexingProgressPercent: number;
+  /** 0..100 within the current phase */
+  progressPercent: number;
+  progressMessage: string;
+  hprofFileSizeBytes: number;
+  rawDumpDeleted: boolean;
+  /** pause the dump (or histogram) cost the target */
+  dumpDurationMs: number | null;
   indexingDurationMs: number | null;
+  analysisDurationMs: number | null;
   totalInstances: number;
   totalClasses: number;
   totalHeapBytes: number;
   gcRootCount: number;
+  retainedSizesAvailable: boolean;
   errorMessage: string | null;
+}
+
+export interface ClassSampleDto {
+  objectId: number;
+  retainedSize: number;
+  gcRootPath: GcRootPathStepDto[];
+  gcRootPathText: string;
+}
+
+export interface ClassStatsDto {
+  className: string;
+  packageCategory: PackageCategory;
+  memoryGroup: MemoryGroup;
+  instances: number;
+  shallowBytes: number;
+  /** null for histogram snapshots */
+  retainedBytes: number | null;
+  definitionCount: number;
+  /** only for the top classes by retained size */
+  sample: ClassSampleDto | null;
+}
+
+export interface MemoryGroupStatsDto {
+  group: MemoryGroup;
+  classCount: number;
+  instances: number;
+  shallowBytes: number;
+  percentOfHeap: number;
+}
+
+export interface ClassDiffDto {
+  className: string;
+  packageCategory: PackageCategory;
+  memoryGroup: MemoryGroup;
+  instancesBefore: number;
+  instancesAfter: number;
+  deltaInstances: number;
+  shallowBytesBefore: number;
+  shallowBytesAfter: number;
+  deltaShallowBytes: number;
+  retainedBytesBefore: number | null;
+  retainedBytesAfter: number | null;
+  deltaRetainedBytes: number | null;
+  newClass: boolean;
+  /** 0..100 */
+  survivalScore: number;
+}
+
+export interface SnapshotDiffDto {
+  baseline: SnapshotSummaryDto;
+  current: SnapshotSummaryDto;
+  retainedDeltaAvailable: boolean;
+  samePid: boolean;
+  chronological: boolean;
+  deltaTotalInstances: number;
+  deltaTotalBytes: number;
+  newClasses: number;
+  removedClasses: number;
+  growingClasses: number;
+  classes: ClassDiffDto[];
+}
+
+export interface PageDto<T> {
+  items: T[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface DiskSpaceCheckDto {
+  pid: number;
+  directory: string;
+  heapUsedBytes: number;
+  factor: number;
+  requiredBytes: number;
+  usableBytes: number;
+  sufficient: boolean;
+}
+
+export interface HistogramSnapshotRequestDto {
+  pid: number;
 }
 
 /** Paths are ordered from the GC root (index 0) to the inspected object (last). */
@@ -252,11 +349,14 @@ export interface DominatorNodeDto {
   objectId: number;
   className: string;
   packageCategory: PackageCategory;
+  memoryGroup: MemoryGroup;
   shallowSize: number;
   retainedSize: number;
   percentOfHeap: number;
   gcRootPath: GcRootPathStepDto[];
-  childCount: number;
+  /** object first: "OrderDto <- Object[142] <- static CACHE in com.acme.OrderService [GC Root: ...]" */
+  gcRootPathText: string;
+  gcRootKind: string | null;
 }
 
 export interface InspectionFindingDto {

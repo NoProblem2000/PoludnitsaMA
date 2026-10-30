@@ -14,6 +14,7 @@ public record InspectorProperties(
         @DefaultValue Live live,
         @DefaultValue Jmx jmx,
         @DefaultValue Jfr jfr,
+        @DefaultValue Snapshots snapshots,
         @DefaultValue Web web
 ) {
 
@@ -28,6 +29,7 @@ public record InspectorProperties(
      * @param histogramMaxInterval   upper bound when the interval is stretched because histograms are slow
      * @param histogramMinGap        minimum gap between two histograms, including on-demand ones
      * @param histogramPauseBudget   histograms slower than this double the interval (the heap walk is a safepoint)
+     * @param histogramTimeout       JMX call timeout of one histogram (large heaps take seconds)
      * @param maxTrackedClasses      classes with a rolling series per target
      * @param trackMinBytes          a class starts being tracked once its shallow size reaches this ...
      * @param trackMinInstances      ... or its instance count reaches this
@@ -42,6 +44,7 @@ public record InspectorProperties(
             @DefaultValue("2m") Duration histogramMaxInterval,
             @DefaultValue("2s") Duration histogramMinGap,
             @DefaultValue("500ms") Duration histogramPauseBudget,
+            @DefaultValue("2m") Duration histogramTimeout,
             @DefaultValue("3000") int maxTrackedClasses,
             @DefaultValue("32KB") DataSize trackMinBytes,
             @DefaultValue("500") long trackMinInstances,
@@ -54,6 +57,8 @@ public record InspectorProperties(
 
     /**
      * @param connectTimeout          attach + JMX connect must finish within this
+     * @param callTimeout             default timeout of one JMX call; a stalled target fails fast instead of
+     *                                blocking a sampler thread
      * @param reconnectInitialBackoff first delay after a failed (re)connect
      * @param reconnectMaxBackoff     cap of the exponential backoff
      * @param connectionCheckPeriod   JMX client heartbeat; detects dead connections without traffic
@@ -62,6 +67,7 @@ public record InspectorProperties(
      */
     public record Jmx(
             @DefaultValue("15s") Duration connectTimeout,
+            @DefaultValue("20s") Duration callTimeout,
             @DefaultValue("1s") Duration reconnectInitialBackoff,
             @DefaultValue("30s") Duration reconnectMaxBackoff,
             @DefaultValue("10s") Duration connectionCheckPeriod,
@@ -90,6 +96,42 @@ public record InspectorProperties(
     ) {
         public Path resolvedWorkDir() {
             return workDir != null ? workDir : Path.of(System.getProperty("java.io.tmpdir"), "jvm-leak-inspector", "jfr");
+        }
+    }
+
+    /**
+     * @param workDir                    root of snapshot files, defaults to
+     *                                   {@code ${java.io.tmpdir}/jvm-leak-inspector/snapshots}. The target JVM writes
+     *                                   the dump here, so it must see the same path (not under a systemd PrivateTmp).
+     * @param diskSpaceFactor            free space required before a dump, as a multiple of the target's used heap;
+     *                                   never below 2.5 (dump + NetBeans indexes)
+     * @param dumpTimeout                maximum duration of {@code dumpHeap} on the target
+     * @param topDominators              objects reported by retained size
+     * @param classesWithSamplePath      top classes by retained size that get a representative GC root path
+     * @param maxInstancesScannedPerClass instances checked per class when looking for that representative
+     * @param maxPathDepth               hops followed towards a GC root before the path is reported as truncated
+     * @param maxSnapshots               snapshots kept in the session; the oldest finished ones are dropped
+     */
+    public record Snapshots(
+            Path workDir,
+            @DefaultValue("2.5") double diskSpaceFactor,
+            @DefaultValue("30m") Duration dumpTimeout,
+            @DefaultValue("200") int topDominators,
+            @DefaultValue("50") int classesWithSamplePath,
+            @DefaultValue("100000") int maxInstancesScannedPerClass,
+            @DefaultValue("64") int maxPathDepth,
+            @DefaultValue("20") int maxSnapshots
+    ) {
+        public static final double MIN_DISK_SPACE_FACTOR = 2.5;
+
+        public Path resolvedWorkDir() {
+            return workDir != null
+                    ? workDir
+                    : Path.of(System.getProperty("java.io.tmpdir"), "jvm-leak-inspector", "snapshots");
+        }
+
+        public double effectiveDiskSpaceFactor() {
+            return Math.max(MIN_DISK_SPACE_FACTOR, diskSpaceFactor);
         }
     }
 

@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class InspectorApplication {
 
     public static void main(String[] args) {
-        // A hung target must not block a JMX call (and the sampler thread) forever.
-        setIfAbsent("sun.rmi.transport.tcp.responseTimeout", "15000");
+        // Socket connect timeout for RMI. Response timeouts are per call (JmxConnectionManager): a global
+        // sun.rmi.transport.tcp.responseTimeout would also cut off multi-minute heap dumps.
         setIfAbsent("sun.rmi.transport.proxy.connectTimeout", "5000");
         SpringApplication.run(InspectorApplication.class, args);
     }

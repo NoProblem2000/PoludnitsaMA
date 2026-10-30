@@ -371,7 +371,7 @@ final class LiveTargetMonitor {
     }
 
     private HistogramFetcher.Result runHistogram() {
-        HistogramFetcher.Result result = connections.call(pid, HistogramFetcher::fetch);
+        HistogramFetcher.Result result = connections.call(pid, props.histogramTimeout(), HistogramFetcher::fetch);
         radar.ingest(result.histogram(), result.gcContext(), result.heapUsedBytes());
         lastHistogramAt = result.histogram().timestampEpochMs();
         lastHistogramDurationMs = result.durationMs();

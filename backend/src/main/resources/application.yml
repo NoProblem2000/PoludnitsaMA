@@ -31,6 +31,13 @@ inspector:
     poll-interval: 10s           # each poll rotates the target's JFR chunk
     max-age: 3m
     max-size: 64MB
+  snapshots:
+    # The TARGET writes the dump here: use a path it sees too (not under systemd PrivateTmp).
+    # work-dir: /var/lib/jvm-leak-inspector
+    disk-space-factor: 2.5       # free space required = factor x target used heap (never below 2.5)
+    dump-timeout: 30m
+    top-dominators: 200
+    max-snapshots: 20
 
 logging:
   level:

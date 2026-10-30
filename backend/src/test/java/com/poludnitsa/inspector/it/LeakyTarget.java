@@ -1,7 +1,7 @@
 package com.poludnitsa.inspector.it;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Child JVM used as the monitored target in integration tests: retains {@link LeakedEntry} objects at a steady rate
@@ -18,18 +18,26 @@ public final class LeakyTarget {
     private static final int MAX_RETAINED = 300_000;
     private static volatile Object blackhole;
 
+    /** The classic static cache that is never evicted; deep snapshot tests expect its GC root path. */
+    public static final class Registry {
+        static final Map<Integer, LeakedEntry> CACHE = new HashMap<>();
+
+        private Registry() {
+        }
+    }
+
     private LeakyTarget() {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        List<LeakedEntry> leak = new ArrayList<>();
         long deadline = System.currentTimeMillis() + 10 * 60_000L;
+        int next = 0;
         System.out.println("READY");
         System.out.flush();
         while (System.currentTimeMillis() < deadline) {
-            if (leak.size() < MAX_RETAINED) {
+            if (next < MAX_RETAINED) {
                 for (int i = 0; i < 25; i++) {
-                    leak.add(new LeakedEntry());
+                    Registry.CACHE.put(next++, new LeakedEntry());
                 }
             }
             for (int i = 0; i < 2_000; i++) {

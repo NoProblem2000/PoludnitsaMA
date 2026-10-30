@@ -12,6 +12,7 @@ import com.poludnitsa.inspector.config.InspectorProperties;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ public class JmxConnectionManager implements DisposableBean {
     private final long selfStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
     private final ConcurrentHashMap<Long, ManagedTarget> targets = new ConcurrentHashMap<>();
     private final ExecutorService connectExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory("jmx-connect"));
+    private final ExecutorService callExecutor = Executors.newCachedThreadPool(new DaemonThreadFactory("jmx-call"));
 
     public JmxConnectionManager(InspectorProperties properties) {
         this.props = properties.jmx();
@@ -173,33 +175,69 @@ public class JmxConnectionManager implements DisposableBean {
         }
     }
 
-    /**
-     * Runs {@code call} on a healthy connection. Communication failures mark the connection broken (the next call
-     * reconnects) and surface as {@link TargetUnavailableException} or, if the process exited,
-     * {@link TargetTerminatedException}.
-     */
+    /** {@link #call(long, Duration, JmxCall)} with the default {@code inspector.jmx.call-timeout}. */
     public <T> T call(long pid, JmxCall<T> call) {
+        return call(pid, props.callTimeout(), call);
+    }
+
+    /**
+     * Runs {@code call} on a healthy connection within {@code timeout}. Communication failures and timeouts mark the
+     * connection broken (the next call reconnects) and surface as {@link TargetUnavailableException} or, if the
+     * process exited, {@link TargetTerminatedException}.
+     *
+     * <p>Timeouts are per call rather than a global RMI response timeout, so long operations such as a heap dump can
+     * get minutes while a stuck target still cannot block a sampler thread.
+     */
+    public <T> T call(long pid, Duration timeout, JmxCall<T> call) {
         TargetConnection connection = connection(pid);
+        Future<T> future = callExecutor.submit(() -> call.call(connection.mbeanServer(), connection.metadata()));
         try {
-            return call.call(connection.mbeanServer(), connection.metadata());
-        } catch (IOException e) {
-            throw connectionLost(pid, connection, e);
-        } catch (InstanceNotFoundException e) {
+            return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            connection.markBroken();
+            throw new TargetUnavailableException(pid, "JMX call did not complete within " + timeout.toMillis()
+                    + " ms (target stalled or overloaded)", e);
+        } catch (InterruptedException e) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new TargetUnavailableException(pid, "interrupted while waiting for the target", e);
+        } catch (ExecutionException e) {
+            throw translate(pid, connection, e.getCause());
+        }
+    }
+
+    private RuntimeException translate(long pid, TargetConnection connection, Throwable failure) {
+        if (failure instanceof IOException io) {
+            return connectionLost(pid, connection, io);
+        }
+        if (failure instanceof InstanceNotFoundException e) {
             refreshMetadataQuietly(pid, connection);
-            throw new TargetOperationException(pid, "MBean not found: " + e.getMessage(), e);
-        } catch (MBeanException e) {
+            return new TargetOperationException(pid, "MBean not found: " + e.getMessage(), e);
+        }
+        if (failure instanceof MBeanException e) {
             Throwable cause = e.getTargetException() != null ? e.getTargetException() : e;
-            throw new TargetOperationException(pid, cause.getClass().getSimpleName() + ": " + cause.getMessage(), e);
-        } catch (JMException | JMRuntimeException e) {
-            throw new TargetOperationException(pid, e.getClass().getSimpleName() + ": " + e.getMessage(), e);
-        } catch (UndeclaredThrowableException e) {
+            return new TargetOperationException(pid, cause.getClass().getSimpleName() + ": " + cause.getMessage(), e);
+        }
+        if (failure instanceof JMException || failure instanceof JMRuntimeException) {
+            return new TargetOperationException(pid,
+                    failure.getClass().getSimpleName() + ": " + failure.getMessage(), failure);
+        }
+        if (failure instanceof UndeclaredThrowableException e) {
             // MXBean proxies wrap checked communication failures.
             Throwable cause = e.getUndeclaredThrowable();
             if (cause instanceof IOException io) {
-                throw connectionLost(pid, connection, io);
+                return connectionLost(pid, connection, io);
             }
-            throw new TargetOperationException(pid, String.valueOf(cause), cause);
+            return new TargetOperationException(pid, String.valueOf(cause), cause);
         }
+        if (failure instanceof RuntimeException runtime) {
+            return runtime;
+        }
+        if (failure instanceof Error error) {
+            throw error;
+        }
+        return new TargetOperationException(pid, String.valueOf(failure), failure);
     }
 
     /** Connects to a remote JMX endpoint and registers it under the PID the target reports. */
@@ -256,6 +294,7 @@ public class JmxConnectionManager implements DisposableBean {
         targets.values().forEach(ManagedTarget::closeConnection);
         targets.clear();
         connectExecutor.shutdownNow();
+        callExecutor.shutdownNow();
     }
 
     private ManagedTarget target(long pid) {

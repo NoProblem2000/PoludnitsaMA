@@ -109,9 +109,14 @@ public class LiveMemoryCollectorService implements DisposableBean {
         return monitor == null ? Optional.empty() : Optional.ofNullable(monitor.latest());
     }
 
+    /** Full {@code GC.class_histogram -all} result (no forced Full GC); the sample also feeds the radar. */
+    public HistogramFetcher.Result captureHistogram(long pid) {
+        return monitor(pid).histogramNow();
+    }
+
     /** Takes a {@code GC.class_histogram -all} right now (no forced Full GC); the sample also feeds the radar. */
     public ClassHistogramDto histogram(long pid, int limit) {
-        HistogramFetcher.Result result = monitor(pid).histogramNow();
+        HistogramFetcher.Result result = captureHistogram(pid);
         ClassHistogram histogram = result.histogram();
         int rows = Math.max(1, Math.min(limit, MAX_HISTOGRAM_ROWS));
         List<ClassHistogramEntryDto> entries = new ArrayList<>(Math.min(rows, histogram.entries().size()));

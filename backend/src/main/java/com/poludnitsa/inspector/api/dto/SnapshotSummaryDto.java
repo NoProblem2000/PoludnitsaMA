@@ -3,34 +3,43 @@ package com.poludnitsa.inspector.api.dto;
 import java.time.Instant;
 
 /**
- * Heap snapshot registered in the current session, either dumped from a target PID or uploaded as a .hprof file.
+ * Snapshot registered in the current session: a quick class histogram or an analysed heap dump.
  *
- * @param sourcePid               {@code null} for uploaded files
- * @param sourceDisplayName       process name, or the file name for uploads
- * @param sourceProcessType       {@code null} for uploads
- * @param liveObjectsOnly         {@code true} when dumped after a Full GC ({@code dumpHeap(path, true)})
- * @param indexingProgressPercent 0..100
- * @param indexingDurationMs      {@code null} until indexing has finished
- * @param totalInstances          {@code 0} until {@link SnapshotStatus#READY}
- * @param totalHeapBytes          sum of shallow sizes of all instances
+ * @param liveObjectsOnly         {@code true} when dumped after a Full GC ({@code dumpHeap(path, true)});
+ *                                always {@code false} for histograms ({@code -all})
+ * @param progressPercent         0..100 within the current phase
+ * @param progressMessage         human-readable current phase
+ * @param hprofFileSizeBytes      size of the raw dump, {@code 0} for histograms
+ * @param rawDumpDeleted          the .hprof and the NetBeans index directory have been removed from disk
+ * @param dumpDurationMs          duration of {@code dumpHeap} (or of the histogram) on the target: the pause it cost
+ * @param indexingDurationMs      {@code null} until indexing finished or for histograms
+ * @param analysisDurationMs      {@code null} until the analysis finished or for histograms
+ * @param totalHeapBytes          sum of shallow sizes of all objects in the snapshot
+ * @param gcRootCount             {@code 0} for histograms
+ * @param retainedSizesAvailable  {@code true} for analysed deep snapshots
  * @param errorMessage            set only when {@link SnapshotStatus#FAILED}
  */
 public record SnapshotSummaryDto(
         String snapshotId,
-        Long sourcePid,
+        SnapshotKind kind,
+        long sourcePid,
         String sourceDisplayName,
         ProcessType sourceProcessType,
-        String hprofPath,
-        long fileSizeBytes,
         Instant createdAt,
         boolean liveObjectsOnly,
         SnapshotStatus status,
-        int indexingProgressPercent,
+        int progressPercent,
+        String progressMessage,
+        long hprofFileSizeBytes,
+        boolean rawDumpDeleted,
+        Long dumpDurationMs,
         Long indexingDurationMs,
+        Long analysisDurationMs,
         long totalInstances,
         int totalClasses,
         long totalHeapBytes,
         int gcRootCount,
+        boolean retainedSizesAvailable,
         String errorMessage
 ) {
 }
