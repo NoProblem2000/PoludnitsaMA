@@ -7,6 +7,7 @@ import {
   Microscope,
   Radar,
   Save,
+  Settings2,
   Trash2,
   X,
 } from 'lucide-react';
@@ -122,8 +123,11 @@ function DumpModeSwitch() {
   );
 }
 
-function ExportMenu({ disabled }: { disabled: boolean }) {
+function ExportMenu() {
+  const live = useInspectorStore((s) => s.mode === 'live');
   const exportReport = useInspectorStore((s) => s.exportReport);
+  const exportOfflineReport = useInspectorStore((s) => s.exportOfflineReport);
+  const setReportModalOpen = useInspectorStore((s) => s.setReportModalOpen);
   const busy = useInspectorStore((s) => s.busy.export);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -131,7 +135,7 @@ function ExportMenu({ disabled }: { disabled: boolean }) {
   useClickOutside(root, open, close);
   const pick = (format: 'JSON' | 'HTML') => {
     setOpen(false);
-    void exportReport(format);
+    void (live ? exportReport(format) : exportOfflineReport(format));
   };
   return (
     <div ref={root} className="relative">
@@ -139,7 +143,6 @@ function ExportMenu({ disabled }: { disabled: boolean }) {
         icon={<Save size={14} />}
         label="Экспорт JSON/HTML"
         busy={busy}
-        disabled={disabled}
         onClick={() => setOpen((value) => !value)}
       />
       {open && (
@@ -158,6 +161,17 @@ function ExportMenu({ disabled }: { disabled: boolean }) {
               <span className="block text-2xs text-kraken-muted">Автономный файл для коллег</span>
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setReportModalOpen(true);
+            }}
+            className="flex w-full items-center gap-2 border-t border-kraken-border px-3 py-2 text-left text-xs text-kraken-muted hover:bg-kraken-card hover:text-kraken-text"
+          >
+            <Settings2 size={14} />
+            Название, история метрик, diff…
+          </button>
         </div>
       )}
     </div>
@@ -175,9 +189,8 @@ export function TopToolbar() {
   const checkDiskSpace = useInspectorStore((s) => s.checkDiskSpace);
   const deepDump = useInspectorStore((s) => s.deepDump);
   const forceGc = useInspectorStore((s) => s.forceGc);
-  const openReportFile = useInspectorStore((s) => s.openReportFile);
+  const setReportModalOpen = useInspectorStore((s) => s.setReportModalOpen);
   const closeOfflineReport = useInspectorStore((s) => s.closeOfflineReport);
-  const fileInput = useRef<HTMLInputElement>(null);
   const [dumpDialog, setDumpDialog] = useState(false);
   const [disk, setDisk] = useState<DiskSpaceCheckDto | null>(null);
   const [gcDialog, setGcDialog] = useState(false);
@@ -241,29 +254,17 @@ export function TopToolbar() {
           onClick={() => setGcDialog(true)}
         />
         <span className="mx-1 h-6 w-px bg-kraken-border" />
-        <ExportMenu disabled={!live} />
+        <ExportMenu />
         <ToolbarButton
           icon={<FolderOpen size={14} />}
           label="Открыть отчёт"
+          title="Перетащите .json / .json.gz отчёт или выберите файл"
           busy={busy.report}
-          onClick={() => fileInput.current?.click()}
+          onClick={() => setReportModalOpen(true)}
         />
         {!live && (
           <ToolbarButton icon={<X size={14} />} label="Закрыть отчёт" onClick={closeOfflineReport} />
         )}
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".json,.gz,application/json,application/gzip"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = '';
-            if (file) {
-              void openReportFile(file);
-            }
-          }}
-        />
       </div>
 
       <ConfirmDialog

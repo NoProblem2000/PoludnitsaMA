@@ -344,6 +344,7 @@ export interface HistogramSnapshotRequestDto {
 export interface GcRootPathStepDto {
   objectId: number;
   className: string;
+  /** field, "static NAME" or "[i]" through which this object references the next step; null for the last */
   referenceName: string | null;
   gcRoot: boolean;
   gcRootKind: string | null;
@@ -361,6 +362,9 @@ export interface DominatorNodeDto {
   /** object first: "OrderDto <- Object[142] <- static CACHE in com.acme.OrderService [GC Root: ...]" */
   gcRootPathText: string;
   gcRootKind: string | null;
+  /** nearest non-JDK class on the path (who holds it); null in summaries written before the field existed */
+  ownerClassName: string | null;
+  ownerGroup: MemoryGroup | null;
 }
 
 export interface InspectionFindingDto {

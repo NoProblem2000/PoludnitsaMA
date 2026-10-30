@@ -35,13 +35,15 @@ async function failure(response: Response): Promise<ApiError> {
 async function send(method: string, url: string, body?: unknown): Promise<Response> {
   let response: Response;
   try {
+    // FormData sets its own multipart Content-Type with the boundary.
+    const form = body instanceof FormData;
     response = await fetch(url, {
       method,
-      headers: body === undefined ? { Accept: 'application/json' } : {
+      headers: body === undefined || form ? { Accept: 'application/json' } : {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     });
   } catch (error) {
     throw new ApiError(0, 'NETWORK', `Бэкенд инспектора недоступен: ${(error as Error).message}`);
@@ -71,6 +73,13 @@ export const http = {
   post: <T>(url: string, body?: unknown) => json<T>('POST', url, body ?? {}),
   put: <T>(url: string, body?: unknown) => json<T>('PUT', url, body ?? {}),
   del: <T>(url: string) => json<T>('DELETE', url),
+
+  /** Multipart POST of one file. */
+  upload<T>(url: string, part: string, file: File): Promise<T> {
+    const form = new FormData();
+    form.append(part, file, file.name);
+    return json<T>('POST', url, form);
+  },
 
   /** POST that returns a file (report export). */
   async download(url: string, body: unknown, fallbackName: string): Promise<Download> {

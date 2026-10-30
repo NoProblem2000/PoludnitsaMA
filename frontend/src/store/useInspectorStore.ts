@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useMemo } from 'react';
 import { api, fetchAllClasses } from '@/api/endpoints';
 import { ApiError, errorMessage, saveBlob } from '@/api/http';
 import { LiveSocket, type SocketState } from '@/api/liveSocket';
@@ -46,6 +47,13 @@ export interface FindingCounts {
   info: number;
 }
 
+export interface ExportOptions {
+  title?: string;
+  includeMetricsHistory?: boolean;
+  /** baseline / current pairs to embed as diffs; empty: oldest vs newest */
+  diffs?: { baselineId: string; currentId: string }[];
+}
+
 interface Busy {
   histogram: boolean;
   deep: boolean;
@@ -86,6 +94,9 @@ export interface InspectorState {
   dumpMode: DumpMode;
   busy: Busy;
   offlineReport: SessionReportBundle | null;
+  /** the file the offline report came from, for converting it to HTML through the backend */
+  offlineReportFile: File | null;
+  reportModalOpen: boolean;
   toasts: Toast[];
 
   init(): void;
@@ -98,12 +109,17 @@ export interface InspectorState {
   checkDiskSpace(): Promise<DiskSpaceCheckDto | null>;
   deepDump(): Promise<void>;
   forceGc(): Promise<GcTriggerResultDto | null>;
-  exportReport(format: 'JSON' | 'HTML'): Promise<void>;
-  openReportFile(file: File): Promise<void>;
+  exportReport(format: 'JSON' | 'HTML', options?: ExportOptions): Promise<void>;
+  /** offline: the open report again, as plain JSON or (through the backend) as HTML */
+  exportOfflineReport(format: 'JSON' | 'HTML'): Promise<void>;
+  /** true when the report was opened */
+  openReportFile(file: File): Promise<boolean>;
   closeOfflineReport(): void;
+  setReportModalOpen(open: boolean): void;
   refreshSnapshots(): Promise<void>;
   selectSnapshot(id: string | null): void;
   toggleCompare(id: string): void;
+  setCompareIds(ids: string[]): void;
   pushToast(toast: Omit<Toast, 'id'>): void;
   dismissToast(id: number): void;
 }
@@ -272,6 +288,8 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
     dumpMode: 'safe',
     busy: { histogram: false, deep: false, gc: false, export: false, report: false },
     offlineReport: null,
+    offlineReportFile: null,
+    reportModalOpen: false,
     toasts: [],
 
     init() {
@@ -323,7 +341,7 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
 
     async selectProcess(pid) {
       if (get().mode === 'offline') {
-        set({ mode: 'live', offlineReport: null });
+        set({ mode: 'live', offlineReport: null, offlineReportFile: null });
       }
       knownStatus.clear();
       set({ activePid: pid, ...emptyLive, streamState: pid == null ? 'idle' : 'connecting' });
@@ -447,16 +465,56 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
       }
     },
 
-    async exportReport(format) {
+    async exportReport(format, options = {}) {
       if (get().busy.export) {
         return;
       }
       setBusy('export', true);
       try {
         const pid = get().activePid;
-        const download = await api.reports.export(format, { pid: pid ?? null, includeMetricsHistory: true });
+        const download = await api.reports.export(format, {
+          pid: pid ?? null,
+          includeMetricsHistory: options.includeMetricsHistory ?? true,
+          diffs: options.diffs ?? [],
+          title: options.title?.trim() || null,
+        });
         saveBlob(download);
         toast('success', `Отчёт ${format} сохранён`, download.fileName);
+      } catch (error) {
+        toast('error', 'Экспорт не удался', errorMessage(error));
+      } finally {
+        setBusy('export', false);
+      }
+    },
+
+    async exportOfflineReport(format) {
+      const { offlineReport: report, offlineReportFile: file } = get();
+      if (!report || get().busy.export) {
+        return;
+      }
+      setBusy('export', true);
+      try {
+        const base = report.title.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '') || 'jvm-memory-report';
+        if (format === 'JSON') {
+          const blob = new Blob([JSON.stringify(report)], { type: 'application/json' });
+          saveBlob({ blob, fileName: `${base}.json` });
+          toast('success', 'Отчёт JSON сохранён', `${base}.json`);
+        } else {
+          if (!file) {
+            throw new Error('Файл отчёта недоступен, откройте его заново');
+          }
+          // The HTML renderer lives in the backend: import the snapshots there, export them, then drop the copies
+          // so they do not show up among the live snapshots of that PID.
+          const imported = await api.reports.import(file);
+          const ids = Object.values(imported.snapshotIds);
+          try {
+            const download = await api.reports.export('HTML', { snapshotIds: ids, includeMetricsHistory: false, title: report.title });
+            saveBlob(download);
+            toast('success', 'Отчёт HTML сохранён', download.fileName);
+          } finally {
+            await Promise.allSettled(ids.map((id) => api.snapshots.delete(id)));
+          }
+        }
       } catch (error) {
         toast('error', 'Экспорт не удался', errorMessage(error));
       } finally {
@@ -479,6 +537,7 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
         set({
           mode: 'offline',
           offlineReport: report,
+          offlineReportFile: file,
           streamState: 'offline',
           ...emptyLive,
           activePid: report.process?.pid ?? null,
@@ -491,15 +550,17 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
         });
         toast('success', 'Офлайн-отчёт открыт',
           `${report.title}: ${snapshots.length} снапшотов, ${report.findings.length} диагнозов`);
+        return true;
       } catch (error) {
         toast('error', 'Не удалось открыть отчёт', errorMessage(error));
+        return false;
       } finally {
         setBusy('report', false);
       }
     },
 
     closeOfflineReport() {
-      set({ mode: 'live', offlineReport: null, ...emptyLive, activePid: null, streamState: 'idle' });
+      set({ mode: 'live', offlineReport: null, offlineReportFile: null, ...emptyLive, activePid: null, streamState: 'idle' });
       const pid = recalledPid();
       void get().refreshProcesses().then(() => {
         if (pid != null && get().processes.some((process) => process.pid === pid)) {
@@ -553,6 +614,14 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
       set({ selectedSnapshotId: id });
     },
 
+    setReportModalOpen(reportModalOpen) {
+      set({ reportModalOpen });
+    },
+
+    setCompareIds(ids) {
+      set({ compareIds: [...new Set(ids)].slice(-2) });
+    },
+
     toggleCompare(id) {
       set((state) => {
         if (state.compareIds.includes(id)) {
@@ -597,10 +666,20 @@ export function countFindings(findings: readonly InspectionFindingDto[]): Findin
 }
 
 /** Baseline (older) and current (newer) of the comparison pair. */
-export function comparePair(state: InspectorState): [SnapshotSummaryDto, SnapshotSummaryDto] | null {
+export function comparePair(state: Pick<InspectorState, 'snapshots' | 'compareIds'>): [SnapshotSummaryDto, SnapshotSummaryDto] | null {
   if (state.compareIds.length !== 2) {
     return null;
   }
   const picked = state.snapshots.filter((s) => state.compareIds.includes(s.snapshotId)).sort(byCreation);
   return picked.length === 2 && picked[0] && picked[1] ? [picked[0], picked[1]] : null;
+}
+
+/**
+ * {@link comparePair} for components. Not a store selector: it builds a new array on every call, which a Zustand
+ * selector must not do (each render would see a "changed" state and render again, forever).
+ */
+export function useComparePair(): [SnapshotSummaryDto, SnapshotSummaryDto] | null {
+  const snapshots = useInspectorStore((s) => s.snapshots);
+  const compareIds = useInspectorStore((s) => s.compareIds);
+  return useMemo(() => comparePair({ snapshots, compareIds }), [snapshots, compareIds]);
 }

@@ -3,14 +3,19 @@ import type {
   ActiveProcessDto,
   ClassStatsDto,
   DiskSpaceCheckDto,
+  DominatorNodeDto,
   GcTriggerResultDto,
+  ImportedReportDto,
   InspectionFindingDto,
+  InspectionRuleRunDto,
   JvmProcessDto,
   LiveMetricsPayloadDto,
   MemoryGroup,
+  MemoryGroupStatsDto,
   MetricsPointDto,
   PageDto,
   ReportExportRequestDto,
+  SnapshotDiffDto,
   SnapshotSummaryDto,
 } from './types';
 
@@ -48,11 +53,21 @@ export const api = {
       return http.get<PageDto<ClassStatsDto>>(`/api/snapshots/${encode(id)}/classes?${query.toString()}`);
     },
     findings: (id: string) => http.get<InspectionFindingDto[]>(`/api/snapshots/${encode(id)}/findings`),
+    delete: (id: string) => http.del<void>(`/api/snapshots/${encode(id)}`),
+    dominators: (id: string) => http.get<DominatorNodeDto[]>(`/api/snapshots/${encode(id)}/dominators`),
+    groups: (id: string) => http.get<MemoryGroupStatsDto[]>(`/api/snapshots/${encode(id)}/groups`),
+    inspections: (id: string) => http.get<InspectionRuleRunDto[]>(`/api/snapshots/${encode(id)}/inspections`),
+    /** Growing classes first; {@code includeShrinking} also returns the freed ones. */
+    diff: (baselineId: string, currentId: string, limit = 5000, includeShrinking = true) =>
+      http.get<SnapshotDiffDto>(`/api/snapshots/diff?baseline=${encode(baselineId)}&current=${encode(currentId)}`
+        + `&limit=${limit}&includeShrinking=${includeShrinking}`),
   },
   reports: {
     export: (format: 'JSON' | 'HTML', request: ReportExportRequestDto) =>
       http.download(`/api/reports/export?format=${format}`, request,
         format === 'JSON' ? 'jvm-memory-report.json.gz' : 'jvm-memory-report.html'),
+    /** Registers a report file's snapshots in the backend session (multipart part "file"). */
+    import: (file: File) => http.upload<ImportedReportDto>('/api/reports/import', 'file', file),
   },
 };
 

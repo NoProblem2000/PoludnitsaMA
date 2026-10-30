@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { BarChart3, GitCompare, Loader2, Microscope, ShieldAlert, XCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import type { SnapshotSummaryDto } from '@/api/types';
-import { comparePair, useInspectorStore } from '@/store/useInspectorStore';
+import { useComparePair, useInspectorStore } from '@/store/useInspectorStore';
 import { formatBytes, formatSignedBytes, formatTime } from '@/utils/format';
 
 const PHASE: Record<SnapshotSummaryDto['status'], string> = {
@@ -117,7 +117,7 @@ export function SnapshotTimeline() {
   const selectedId = useInspectorStore((s) => s.selectedSnapshotId);
   const compareIds = useInspectorStore((s) => s.compareIds);
   const findings = useInspectorStore((s) => s.findings);
-  const pair = useInspectorStore(comparePair);
+  const pair = useComparePair();
   const selectSnapshot = useInspectorStore((s) => s.selectSnapshot);
   const toggleCompare = useInspectorStore((s) => s.toggleCompare);
   const setView = useInspectorStore((s) => s.setView);

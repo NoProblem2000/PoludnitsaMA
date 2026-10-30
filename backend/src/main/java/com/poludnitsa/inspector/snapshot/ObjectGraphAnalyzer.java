@@ -179,9 +179,21 @@ public class ObjectGraphAnalyzer {
         String categorized = className.startsWith("class ") ? "java.lang.Class" : className;
         PackageCategory category = PackageCategorizer.categorize(categorized);
         long retained = instance.getRetainedSize();
+        String owner = categorized;
+        PackageCategory ownerCategory = category;
+        for (int i = path.steps().size() - 1; i >= 0; i--) {
+            String name = path.steps().get(i).className();
+            String bare = name.startsWith("class ") ? name.substring("class ".length()) : name;
+            PackageCategory candidate = PackageCategorizer.categorize(bare);
+            if (candidate != PackageCategory.JDK && candidate != PackageCategory.PRIMITIVE_OR_ARRAY) {
+                owner = bare;
+                ownerCategory = candidate;
+                break;
+            }
+        }
         return new DominatorNodeDto(instance.getInstanceId(), className, category, MemoryGroup.of(category),
                 instance.getSize(), retained, totalBytes > 0 ? 100.0 * retained / totalBytes : 0,
-                path.steps(), path.text(), path.rootKind());
+                path.steps(), path.text(), path.rootKind(), owner, MemoryGroup.of(ownerCategory));
     }
 
     private static int percent(BoundedRangeModel model) {

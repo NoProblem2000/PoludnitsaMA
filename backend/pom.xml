@@ -27,7 +27,8 @@
         <netbeans.version>RELEASE210</netbeans.version>
         <hazelcast.version>5.3.6</hazelcast.version>
 
-        <!-- bundle-ui profile -->
+        <!-- React UI build (see frontend-maven-plugin); -DskipUi for backend-only builds -->
+        <skipUi>false</skipUi>
         <frontend.dir>${project.basedir}/../frontend</frontend.dir>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <node.version>v20.18.0</node.version>
@@ -140,74 +141,92 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+              React UI inside the jar. `mvn clean package`:
+                generate-resources  install Node into target/node, `npm ci`, `npm run build` (frontend/dist)
+                process-resources   copy frontend/dist to target/classes/static (served by Spring Boot at /)
+              -DskipUi skips both (backend-only builds and tests).
+            -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>${frontend-maven-plugin.version}</version>
+                <configuration>
+                    <workingDirectory>${frontend.dir}</workingDirectory>
+                    <installDirectory>${project.build.directory}/node</installDirectory>
+                    <nodeVersion>${node.version}</nodeVersion>
+                    <skip>${skipUi}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>npm-ci</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>ci --no-audit --no-fund</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-frontend-dist</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipUi}</skip>
+                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${frontend.dir}/dist</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+              Add-Opens in the manifest of the main jar act like the command-line flags when started with `java -jar`
+              (JEP 261), so a plain `java -jar jvm-leak-inspector.jar` behaves like start-inspector.sh.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Add-Opens>jdk.attach/sun.tools.attach java.management/sun.management java.management/javax.management java.rmi/sun.rmi.transport java.base/java.nio java.base/sun.nio.ch</Add-Opens>
+                            <Add-Exports>jdk.attach/sun.tools.attach java.management/sun.management</Add-Exports>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
-    <profiles>
-        <!-- mvn -Pbundle-ui package : builds ../frontend and embeds it into the jar as static resources -->
-        <profile>
-            <id>bundle-ui</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.github.eirslett</groupId>
-                        <artifactId>frontend-maven-plugin</artifactId>
-                        <version>${frontend-maven-plugin.version}</version>
-                        <configuration>
-                            <workingDirectory>${frontend.dir}</workingDirectory>
-                            <installDirectory>${project.build.directory}/node</installDirectory>
-                            <nodeVersion>${node.version}</nodeVersion>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>install-node-and-npm</id>
-                                <goals>
-                                    <goal>install-node-and-npm</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>npm-ci</id>
-                                <goals>
-                                    <goal>npm</goal>
-                                </goals>
-                                <configuration>
-                                    <arguments>ci</arguments>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>npm-build</id>
-                                <goals>
-                                    <goal>npm</goal>
-                                </goals>
-                                <configuration>
-                                    <arguments>run build</arguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-resources-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-frontend-dist</id>
-                                <phase>process-resources</phase>
-                                <goals>
-                                    <goal>copy-resources</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
-                                    <resources>
-                                        <resource>
-                                            <directory>${frontend.dir}/dist</directory>
-                                        </resource>
-                                    </resources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

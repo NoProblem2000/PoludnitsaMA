@@ -14,6 +14,11 @@ import java.util.List;
  *                        {@code OrderDto <- Object[142] <- ArrayList.elementData <- static CACHE in com.acme.OrderService
  *                        [GC Root: sticky class]}
  * @param gcRootKind      kind of the GC root the path ends at, {@code null} if no root was reached
+ * @param ownerClassName  the code that holds the object: the nearest class on the GC root path, starting at the
+ *                        object, that is not a JDK or array type (the {@code OrderService} of a JDK {@code HashMap} in
+ *                        its static field); the object's own class when the whole path is JDK; {@code null} in
+ *                        summaries written before this field existed
+ * @param ownerGroup      memory group of {@code ownerClassName}
  */
 public record DominatorNodeDto(
         long objectId,
@@ -25,7 +30,9 @@ public record DominatorNodeDto(
         double percentOfHeap,
         List<GcRootPathStepDto> gcRootPath,
         String gcRootPathText,
-        String gcRootKind
+        String gcRootKind,
+        String ownerClassName,
+        MemoryGroup ownerGroup
 ) {
     public DominatorNodeDto {
         gcRootPath = gcRootPath == null ? List.of() : List.copyOf(gcRootPath);

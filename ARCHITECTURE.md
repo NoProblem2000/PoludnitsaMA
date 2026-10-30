@@ -7,11 +7,15 @@ Standalone веб-приложение (аналог dotMemory) для анал�
 PoludnitsaMA/
 ├── backend/            Spring Boot 3.x (Java 17, Maven) — один исполняемый jar
 ├── frontend/           React 18 + TypeScript + Vite + Tailwind
+├── start-inspector.sh  запуск на Linux (JDK 17+, -Xms256m -Xmx1024m, --add-opens), проверки JDK/jdk.attach
+├── start-inspector.bat то же для Windows
 └── ARCHITECTURE.md
 ```
 
-В production фронтенд собирается в `backend/target/classes/static` (Maven-профиль `bundle-ui`),
-и на сервер копируется **один** jar: `java -jar jvm-leak-inspector.jar`.
+`cd backend && mvn clean package` ставит Node 20 в `backend/target/node`, выполняет `npm ci` и `npm run build`,
+копирует `frontend/dist` в `target/classes/static` и собирает **один** jar `backend/target/jvm-leak-inspector.jar`
+(UI отдаётся Spring Boot на `/`). `-DskipUi` — сборка без фронтенда. На сервер копируются jar и скрипт запуска:
+`./start-inspector.sh` (или `java -jar`: `Add-Opens` прописаны и в манифесте jar).
 
 ---
 
@@ -95,29 +99,49 @@ src/
 ├── api/
 │   ├── types.ts            # TS-зеркало Java DTO (1:1 с api.dto)
 │   ├── http.ts             # fetch-обёртка, ApiError из ApiErrorDto, скачивание файлов
-│   ├── endpoints.ts        # типизированные вызовы REST (processes, snapshots, reports), постраничные классы
+│   ├── endpoints.ts        # типизированные вызовы REST (processes, snapshots, diff, reports, import), постраничные классы
 │   ├── liveSocket.ts       # WebSocket /ws/live: subscribe/unsubscribe, ping, реконнект с backoff
 │   └── offlineReport.ts    # чтение .json.gz/.json в браузере (DecompressionStream), без бэкенда
 ├── store/
 │   ├── useInspectorStore.ts  # Zustand: процессы, live/offline режим, поток, снапшоты, findings, действия тулбара
 │   ├── liveSeries.ts       # кольцевой буфер 300 с (ChartPoint, GcMarker) из payload/истории
-│   └── radarRows.ts        # слияние live-подозреваемых, классов гистограммы и offline-diff в строки радара
+│   ├── radarRows.ts        # слияние live-подозреваемых, классов гистограммы и offline-diff в строки радара
+│   └── useSnapshotData.ts  # выбор deep-снапшота и загрузка доминаторов/диагнозов (кэш; offline — из отчёта)
 ├── theme/palette.ts        # палитра GitKraken для ECharts/inline-стилей, градиент score emerald→amber→coral
 ├── components/
 │   ├── layout/             # AppShell, TopToolbar, ProcessSelector, Sidebar, SnapshotTimeline, ToastStack
-│   ├── common/             # Badge, Tooltip, ToolbarButton, ConfirmDialog, EmptyState, ScoreBar
-│   └── charts/EChart.tsx   # модульный ECharts (core + нужные части), resize/dispose, replaceMerge серий
+│   ├── common/             # Badge, Tooltip, ToolbarButton, ConfirmDialog, Modal, EmptyState, ScoreBar,
+│   │                       # CodeBlock (подсветка + копирование), SnapshotSelect
+│   ├── heap/GcRootPathGraph.tsx  # вертикальная цепочка GC Root → ссылки (поля/static/[i]) → объект
+│   └── charts/EChart.tsx   # модульный ECharts (line, scatter, sunburst), resize/dispose, click-события
 ├── features/
 │   ├── live/               # LiveDashboardView, StatCards, MemoryPoolsChart, LeakRadarTable (@tanstack/react-virtual)
-│   ├── heuristics/         # HeuristicsView (шаг 6)
-│   ├── heap/               # DominatorsView (шаг 6)
-│   └── diff/               # DiffView (шаг 6)
+│   ├── heuristics/         # HeuristicsAdvisorView: диагнозы по severity/категориям, виновник, путь, why, fix
+│   ├── heap/               # DominatorTreeView (sunburst + виртуализированное дерево), dominatorTree.ts
+│   ├── diff/               # SnapshotDiffView (+Δ/−Δ, виртуализация), localDiff.ts (diff отчёта в браузере)
+│   └── reports/            # ReportModal: drag-and-drop импорт, экспорт JSON/HTML
 ├── hooks/                  # useNow, useClickOutside
-└── utils/                  # format (байты, скорости, аптайм), categories (группы, цвета)
+└── utils/                  # format (байты, скорости, аптайм), categories (группы, цвета), gcRoots (тип корня)
 ```
 
 Разработка: `npm run dev` (Vite на 5173, проксирует `/api` и `/ws` на бэкенд 8080). Node можно не ставить:
-`mvn -Pbundle-ui package` скачивает Node 20 в `backend/target/node`, собирает UI и кладёт его в jar.
+`mvn clean package` скачивает Node 20 в `backend/target/node`, собирает UI и кладёт его в jar.
+
+**Контракт фронтенд ↔ бэкенд** проверяет `FrontendContractTest` (в `mvn verify`): каждый интерфейс и union в
+`types.ts` должен совпадать с JSON-свойствами Jackson / константами enum Java-DTO того же имени, каждый вызов в
+`endpoints.ts` — с методом, путём, query-параметрами, multipart-частью и полями тела маппинга контроллера, протокол
+`/ws/live` — с обработчиком.
+
+### Экраны глубокого анализа
+* **Leak Heuristics Advisor** — слева диагнозы `InspectionFindingDto`, сгруппированные по severity (coral / amber /
+  cyan) и категориям (WildFly / Jakarta EE, Hazelcast Client, JVM Collections); справа «Виновник и ущерб»
+  (класс, поле, retained, % кучи, факты), граф пути до GC Root (тип корня: Thread / Static Field / CDI Singleton /
+  ModuleClassLoader), `whyItHappens` и `howToFixCodeSnippet` с копированием.
+* **Dominator Tree & Sunburst** — бэкенд отдаёт плоский топ объектов по retained size; клиент вкладывает их друг в
+  друга по путям до GC Root (доминатор лежит на каждом пути к объекту, в том числе на кратчайшем), поэтому sunburst
+  (подсистема → класс → объект → вложенные доминаторы) не считает байты дважды. Остаток кучи — серый сектор.
+* **Snapshot Comparison** — `GET /api/snapshots/diff?includeShrinking=true&limit=5000`; в офлайн-отчёте тот же
+  алгоритм (`localDiff.ts`, зеркало `SnapshotDiffService`) считается в браузере для любой пары снапшотов.
 
 ## 4. Цветовая система (Tailwind `kraken.*`)
 

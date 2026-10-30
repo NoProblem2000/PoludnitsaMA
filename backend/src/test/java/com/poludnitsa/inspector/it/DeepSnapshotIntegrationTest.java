@@ -127,6 +127,10 @@ class DeepSnapshotIntegrationTest {
             assertThat(d.className()).isEqualTo("java.util.HashMap");
             assertThat(d.gcRootPathText()).startsWith("HashMap <- static CACHE in " + REGISTRY);
             assertThat(d.retainedSize()).isGreaterThan(entries.shallowBytes());
+            // a JDK map in a static field belongs to the class that declares the field
+            assertThat(d.memoryGroup()).isEqualTo(MemoryGroup.JDK_CORE);
+            assertThat(d.ownerClassName()).isEqualTo(REGISTRY);
+            assertThat(d.ownerGroup()).isEqualTo(MemoryGroup.USER_BUSINESS_CODE);
         });
 
         assertThat(data.groups()).extracting(MemoryGroupStatsDto::group).contains(MemoryGroup.USER_BUSINESS_CODE);
