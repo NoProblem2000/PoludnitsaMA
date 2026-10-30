@@ -9,6 +9,8 @@ import com.poludnitsa.inspector.api.dto.SnapshotStatus;
 import com.poludnitsa.inspector.common.JvmTypeNames;
 import com.poludnitsa.inspector.common.PackageCategorizer;
 import com.poludnitsa.inspector.config.InspectorProperties;
+import com.poludnitsa.inspector.heap.GcRootPathResolver;
+import com.poludnitsa.inspector.inspection.LeakHeuristicsEngine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -44,9 +46,11 @@ public class ObjectGraphAnalyzer {
     private static final Logger log = LoggerFactory.getLogger(ObjectGraphAnalyzer.class);
 
     private final InspectorProperties.Snapshots props;
+    private final LeakHeuristicsEngine engine;
 
-    public ObjectGraphAnalyzer(InspectorProperties properties) {
+    public ObjectGraphAnalyzer(InspectorProperties properties, LeakHeuristicsEngine engine) {
         this.props = properties.snapshots();
+        this.engine = engine;
     }
 
     /** Runs on the calling thread; {@code record} receives phases and live progress. */
@@ -113,11 +117,17 @@ public class ObjectGraphAnalyzer {
             for (ClassAccumulator accumulator : ranked) {
                 classStats.add(accumulator.toDto());
             }
+
+            // Inspections need the open heap: after this method the raw dump is deleted.
+            LeakHeuristicsEngine.InspectionOutcome inspections = engine.inspect(heap, totalBytes, paths,
+                    message -> record.phase(SnapshotStatus.ANALYZING, message));
+
             SnapshotData data = new SnapshotData(totalInstances, classStats.size(), totalBytes, gcRoots, true,
-                    classStats, dominators, SnapshotDataFactory.groups(classStats, totalBytes));
+                    classStats, dominators, SnapshotDataFactory.groups(classStats, totalBytes),
+                    inspections.findings(), inspections.runs());
             record.analysed(millisSince(analysisStarted), data);
-            log.info("Analysed {}: {} objects, {} classes, {} bytes, {} GC roots", hprof, totalInstances,
-                    classStats.size(), totalBytes, gcRoots);
+            log.info("Analysed {}: {} objects, {} classes, {} bytes, {} GC roots, {} findings", hprof,
+                    totalInstances, classStats.size(), totalBytes, gcRoots, inspections.findings().size());
             return data;
         } finally {
             record.progressSource(null);

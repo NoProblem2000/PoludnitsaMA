@@ -25,6 +25,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <netbeans.version>RELEASE210</netbeans.version>
+        <hazelcast.version>5.3.6</hazelcast.version>
 
         <!-- bundle-ui profile -->
         <frontend.dir>${project.basedir}/../frontend</frontend.dir>
@@ -80,6 +81,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Real Hazelcast member + client in a child JVM, to test the Hazelcast inspections on genuine heap shapes -->
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>${hazelcast.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

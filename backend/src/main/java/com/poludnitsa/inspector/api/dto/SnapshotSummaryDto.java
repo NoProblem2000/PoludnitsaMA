@@ -18,6 +18,7 @@ import java.time.Instant;
  * @param gcRootCount             {@code 0} for histograms
  * @param retainedSizesAvailable  {@code true} for analysed deep snapshots
  * @param errorMessage            set only when {@link SnapshotStatus#FAILED}
+ * @param imported                loaded from a report file rather than taken in this session
  */
 public record SnapshotSummaryDto(
         String snapshotId,
@@ -40,6 +41,7 @@ public record SnapshotSummaryDto(
         long totalHeapBytes,
         int gcRootCount,
         boolean retainedSizesAvailable,
-        String errorMessage
+        String errorMessage,
+        boolean imported
 ) {
 }

@@ -34,6 +34,7 @@ public final class SnapshotRecord {
     private Long analysisDurationMs;
     private String errorMessage;
     private SnapshotData data;
+    private boolean imported;
 
     SnapshotRecord(String id, SnapshotKind kind, long pid, String displayName, ProcessType processType,
                    Instant createdAt, boolean liveObjectsOnly) {
@@ -49,9 +50,14 @@ public final class SnapshotRecord {
     }
 
     static SnapshotRecord restored(SnapshotSummaryDto summary, SnapshotData data) {
-        SnapshotRecord record = new SnapshotRecord(summary.snapshotId(), summary.kind(), summary.sourcePid(),
+        return restored(summary, data, summary.snapshotId(), summary.imported());
+    }
+
+    static SnapshotRecord restored(SnapshotSummaryDto summary, SnapshotData data, String id, boolean imported) {
+        SnapshotRecord record = new SnapshotRecord(id, summary.kind(), summary.sourcePid(),
                 summary.sourceDisplayName(), summary.sourceProcessType(), summary.createdAt(),
                 summary.liveObjectsOnly());
+        record.imported = imported;
         record.status = SnapshotStatus.READY;
         record.progressMessage = "Restored from summary";
         record.progressPercent = 100;
@@ -158,6 +164,6 @@ public final class SnapshotRecord {
                 current == null ? 0 : current.totalHeapBytes(),
                 current == null ? 0 : current.gcRootCount(),
                 current != null && current.retainedSizesAvailable(),
-                errorMessage);
+                errorMessage, imported);
     }
 }

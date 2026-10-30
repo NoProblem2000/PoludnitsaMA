@@ -1,14 +1,17 @@
 package com.poludnitsa.inspector.it;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-/** Starts {@link LeakyTarget} in a separate JVM so tests attach to a real foreign process, never to themselves. */
+/** Starts a target main class in a separate JVM so tests attach to a real foreign process, never to themselves. */
 final class TargetJvm implements AutoCloseable {
 
     private final Process process;
@@ -18,25 +21,44 @@ final class TargetJvm implements AutoCloseable {
     }
 
     static TargetJvm start() throws Exception {
+        return start(LeakyTarget.class, 256);
+    }
+
+    /**
+     * @param extraClasspath classes whose jars or directories go on the child's class path besides test classes
+     */
+    static TargetJvm start(Class<?> mainClass, int heapMb, Class<?>... extraClasspath) throws Exception {
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-        String classes = Path.of(LeakyTarget.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-                .toString();
-        Process process = new ProcessBuilder(java, "-Xmx256m", "-XX:+UseG1GC", "-cp", classes,
-                LeakyTarget.class.getName())
+        List<String> classpath = new ArrayList<>();
+        classpath.add(location(mainClass));
+        for (Class<?> type : extraClasspath) {
+            classpath.add(location(type));
+        }
+        Process process = new ProcessBuilder(java, "-Xmx" + heapMb + "m", "-XX:+UseG1GC",
+                "-Dhazelcast.phone.home.enabled=false", "-Dhazelcast.logging.type=none",
+                "-cp", String.join(File.pathSeparator, classpath), mainClass.getName())
                 .redirectErrorStream(true)
                 .start();
         BufferedReader output = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-        String line = CompletableFuture.supplyAsync(() -> {
+        List<String> lines = new ArrayList<>();
+        String ready = CompletableFuture.supplyAsync(() -> {
             try {
-                return output.readLine();
+                String line;
+                while ((line = output.readLine()) != null) {
+                    if (line.equals("READY")) {
+                        return line;
+                    }
+                    lines.add(line);
+                }
+                return null;
             } catch (IOException e) {
                 return null;
             }
-        }).get(30, TimeUnit.SECONDS);
-        if (!"READY".equals(line)) {
+        }).get(120, TimeUnit.SECONDS);
+        if (ready == null) {
             process.destroyForcibly();
-            throw new IllegalStateException("Target JVM did not start: " + line);
+            throw new IllegalStateException("Target JVM did not start: " + String.join("\n", lines));
         }
         // Keep draining output so the child never blocks on a full pipe.
         Thread drain = new Thread(() -> {
@@ -51,6 +73,10 @@ final class TargetJvm implements AutoCloseable {
         drain.setDaemon(true);
         drain.start();
         return new TargetJvm(process);
+    }
+
+    private static String location(Class<?> type) throws Exception {
+        return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
     }
 
     long pid() {

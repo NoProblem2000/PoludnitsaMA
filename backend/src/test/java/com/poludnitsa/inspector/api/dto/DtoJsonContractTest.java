@@ -52,7 +52,8 @@ class DtoJsonContractTest {
         var finding = new InspectionFindingDto("r1#42", "jakarta.threadlocal-in-managed-pool", Severity.CRITICAL,
                 FindingCategory.JAKARTA_WILDFLY, "ThreadLocal leak", 1L << 20, 3, "java.lang.ThreadLocal$ThreadLocalMap",
                 "table", List.of(new GcRootPathStepDto(1, "java.lang.Thread", "threadLocals", true, "thread object")),
-                "why", "threadLocal.remove();");
+                "Ctx <- ThreadLocalMap$Entry.value <- Thread.threadLocals [GC Root: thread object]",
+                List.of("Потоков: 4"), "why", "threadLocal.remove();");
 
         assertThat(mapper.readValue(mapper.writeValueAsString(finding), InspectionFindingDto.class)).isEqualTo(finding);
     }

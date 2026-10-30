@@ -7,6 +7,7 @@ import com.poludnitsa.inspector.api.dto.ConnectionState;
 import com.poludnitsa.inspector.api.dto.GcTriggerResultDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
+import com.poludnitsa.inspector.api.dto.MetricsPointDto;
 import com.poludnitsa.inspector.common.DaemonThreadFactory;
 import com.poludnitsa.inspector.common.OperationRejectedException;
 import com.poludnitsa.inspector.common.PackageCategorizer;
@@ -107,6 +108,12 @@ public class LiveMemoryCollectorService implements DisposableBean {
     public Optional<LiveMetricsPayloadDto> latest(long pid) {
         LiveTargetMonitor monitor = monitors.get(pid);
         return monitor == null ? Optional.empty() : Optional.ofNullable(monitor.latest());
+    }
+
+    /** Compact metric history of a monitored PID, oldest first; empty when not monitored. */
+    public List<MetricsPointDto> history(long pid) {
+        LiveTargetMonitor monitor = monitors.get(pid);
+        return monitor == null ? List.of() : monitor.history();
     }
 
     /** Full {@code GC.class_histogram -all} result (no forced Full GC); the sample also feeds the radar. */

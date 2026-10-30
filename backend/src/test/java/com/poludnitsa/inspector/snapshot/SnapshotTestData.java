@@ -45,7 +45,8 @@ final class SnapshotTestData {
         long total = classes.stream().mapToLong(ClassStatsDto::shallowBytes).sum();
         long instances = classes.stream().mapToLong(ClassStatsDto::instances).sum();
         record.analysed(10L, new SnapshotData(instances, classes.size(), total, kind == SnapshotKind.DEEP ? 5 : 0,
-                kind == SnapshotKind.DEEP, classes, List.of(), SnapshotDataFactory.groups(classes, total)));
+                kind == SnapshotKind.DEEP, classes, List.of(), SnapshotDataFactory.groups(classes, total), List.of(),
+                List.of()));
         store.complete(record);
         return record;
     }

@@ -1,4 +1,4 @@
-package com.poludnitsa.inspector.snapshot;
+package com.poludnitsa.inspector.heap;
 
 import com.poludnitsa.inspector.api.dto.GcRootPathStepDto;
 import com.poludnitsa.inspector.common.JvmTypeNames;
@@ -25,22 +25,22 @@ import org.netbeans.lib.profiler.heap.Value;
  * {@code OrderDto <- Object[142] <- ArrayList.elementData <- static CACHE in com.acme.OrderService [GC Root: sticky class]}.
  * HPROF has no field modifiers or declared types, so only {@code static} is shown.
  */
-final class GcRootPathResolver {
+public final class GcRootPathResolver {
 
     private static final int MAX_REFERENCES_SCANNED = 100_000;
 
-    record ResolvedPath(List<GcRootPathStepDto> steps, String text, String rootKind) {
+    public record ResolvedPath(List<GcRootPathStepDto> steps, String text, String rootKind) {
     }
 
     private final Heap heap;
     private final int maxDepth;
 
-    GcRootPathResolver(Heap heap, int maxDepth) {
+    public GcRootPathResolver(Heap heap, int maxDepth) {
         this.heap = heap;
         this.maxDepth = Math.max(2, maxDepth);
     }
 
-    ResolvedPath resolve(Instance target) {
+    public ResolvedPath resolve(Instance target) {
         List<Instance> chain = new ArrayList<>();
         Set<Long> seen = new HashSet<>();
         Instance current = target;
@@ -164,7 +164,7 @@ final class GcRootPathResolver {
         return kind;
     }
 
-    static String simpleName(String className) {
+    public static String simpleName(String className) {
         if (className.startsWith("class ")) {
             return className;
         }

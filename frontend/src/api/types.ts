@@ -253,6 +253,8 @@ export interface SnapshotSummaryDto {
   gcRootCount: number;
   retainedSizesAvailable: boolean;
   errorMessage: string | null;
+  /** loaded from a report file */
+  imported: boolean;
 }
 
 export interface ClassSampleDto {
@@ -370,8 +372,101 @@ export interface InspectionFindingDto {
   suspectClassName: string;
   fieldName: string | null;
   gcRootPath: GcRootPathStepDto[];
+  /** object first: "Ctx <- ThreadLocalMap$Entry.value <- Thread.threadLocals [GC Root: thread object]" */
+  gcRootPathText: string | null;
+  /** facts found in the heap that support the diagnosis */
+  evidence: string[];
+  /** Russian explanation */
   whyItHappens: string;
   howToFixCodeSnippet: string;
+}
+
+export interface InspectionRuleRunDto {
+  ruleId: string;
+  title: string;
+  category: FindingCategory;
+  durationMs: number;
+  findings: number;
+  applicable: boolean;
+  truncated: boolean;
+  error: string | null;
+}
+
+export interface InspectionRuleDto {
+  ruleId: string;
+  title: string;
+  category: FindingCategory;
+  enabled: boolean;
+}
+
+/** Compact live-metrics point; bytes, -1 = unknown. */
+export interface MetricsPointDto {
+  timestampEpochMs: number;
+  heapUsed: number;
+  heapCommitted: number;
+  heapMax: number;
+  nonHeapUsed: number;
+  metaspaceUsed: number;
+  oldGenUsed: number;
+  oldGenUsedAfterGc: number;
+  gcOverheadPercent: number;
+  gcCollectionsPerMin: number;
+  allocationRateBytesPerSec: number | null;
+}
+
+/** Backend SnapshotData: the full analysis that survives the deleted .hprof. */
+export interface SnapshotDataDto {
+  totalInstances: number;
+  totalClasses: number;
+  totalHeapBytes: number;
+  gcRootCount: number;
+  retainedSizesAvailable: boolean;
+  classes: ClassStatsDto[];
+  dominators: DominatorNodeDto[];
+  groups: MemoryGroupStatsDto[];
+  findings: InspectionFindingDto[];
+  inspections: InspectionRuleRunDto[];
+}
+
+export interface DiffPairDto {
+  baselineId: string;
+  currentId: string;
+}
+
+export interface ReportExportRequestDto {
+  pid?: number | null;
+  snapshotIds?: string[];
+  diffs?: DiffPairDto[];
+  includeMetricsHistory?: boolean;
+  title?: string | null;
+}
+
+export interface SessionReportBundle {
+  formatVersion: number;
+  reportId: string;
+  title: string;
+  /** ISO-8601 instant */
+  generatedAt: string;
+  generator: string;
+  hostName: string;
+  process: JvmProcessDto | null;
+  metricsHistory: MetricsPointDto[];
+  snapshots: { summary: SnapshotSummaryDto; data: SnapshotDataDto }[];
+  diffs: SnapshotDiffDto[];
+  findings: InspectionFindingDto[];
+}
+
+export interface ImportedReportDto {
+  reportId: string;
+  title: string;
+  generatedAt: string;
+  hostName: string;
+  processName: string | null;
+  /** id in the file -> id in this session */
+  snapshotIds: Record<string, string>;
+  findings: number;
+  metricsPoints: number;
+  warnings: string[];
 }
 
 export interface HeapDumpRequestDto {

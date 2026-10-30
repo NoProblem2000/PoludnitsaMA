@@ -15,6 +15,7 @@ public record InspectorProperties(
         @DefaultValue Jmx jmx,
         @DefaultValue Jfr jfr,
         @DefaultValue Snapshots snapshots,
+        @DefaultValue Inspections inspections,
         @DefaultValue Web web
 ) {
 
@@ -37,6 +38,7 @@ public record InspectorProperties(
      * @param leakCandidateThreshold score from which a class is flagged as a leak candidate
      * @param idleGrace              a monitor without subscribers and not selected stops after this
      * @param samplerThreads         threads polling all monitored targets
+     * @param historySize            compact metric points kept per target for charts and reports (1 per sample)
      */
     public record Live(
             @DefaultValue("1s") Duration sampleInterval,
@@ -51,7 +53,8 @@ public record InspectorProperties(
             @DefaultValue("30") int topSuspects,
             @DefaultValue("60") int leakCandidateThreshold,
             @DefaultValue("60s") Duration idleGrace,
-            @DefaultValue("4") int samplerThreads
+            @DefaultValue("4") int samplerThreads,
+            @DefaultValue("3600") int historySize
     ) {
     }
 
@@ -133,6 +136,53 @@ public record InspectorProperties(
         public double effectiveDiskSpaceFactor() {
             return Math.max(MIN_DISK_SPACE_FACTOR, diskSpaceFactor);
         }
+    }
+
+    /**
+     * Thresholds of the leak inspections that run on every deep snapshot.
+     *
+     * @param enabled                      run inspections at all
+     * @param disabledRules                rule ids to skip
+     * @param ruleTimeBudget               a rule stops scanning after this and reports what it found (truncated)
+     * @param maxInstancesPerRule          instances of one class a rule looks at
+     * @param maxFindingsPerRule           findings kept per rule, most severe first
+     * @param minReportedWaste             below this, informational findings are not reported
+     * @param threadLocalMinBytes          ThreadLocal values above this in total are critical
+     * @param poolThreadPrefixes           names of long-living server pool threads
+     * @param collectionHeapShare          a collection retaining this share of the heap is reported
+     * @param collectionMinElements        a collection with this many elements is reported
+     * @param hibernateEntitiesWarning     managed entities per persistence context that warn
+     * @param hibernateEntitiesCritical    managed entities per persistence context that are critical
+     * @param httpSessionsWarning          in-memory HTTP sessions per deployment that warn
+     * @param httpSessionFatBytes          average session size that counts as fat
+     * @param listenersWarning             Hazelcast client listener registrations that warn
+     * @param cdiDependentInstancesWarning dependent instances tracked by one CreationalContext that warn
+     * @param cdiCollectionElementsWarning elements of a collection field of a long-living bean that warn
+     * @param duplicateStringMinCopies     copies of the same text that make a duplicate group
+     * @param maxStringsScanned            strings fingerprinted by the duplicate inspection
+     */
+    public record Inspections(
+            @DefaultValue("true") boolean enabled,
+            List<String> disabledRules,
+            @DefaultValue("2m") Duration ruleTimeBudget,
+            @DefaultValue("1000000") int maxInstancesPerRule,
+            @DefaultValue("20") int maxFindingsPerRule,
+            @DefaultValue("1MB") DataSize minReportedWaste,
+            @DefaultValue("1MB") DataSize threadLocalMinBytes,
+            @DefaultValue({"default task-", "XNIO-", "ejb-client-", "EE-Managed", "ServerService Thread Pool",
+                    "Batch Thread", "Transaction Reaper"}) List<String> poolThreadPrefixes,
+            @DefaultValue("0.05") double collectionHeapShare,
+            @DefaultValue("50000") int collectionMinElements,
+            @DefaultValue("1000") int hibernateEntitiesWarning,
+            @DefaultValue("10000") int hibernateEntitiesCritical,
+            @DefaultValue("10000") int httpSessionsWarning,
+            @DefaultValue("512KB") DataSize httpSessionFatBytes,
+            @DefaultValue("100") int listenersWarning,
+            @DefaultValue("1000") int cdiDependentInstancesWarning,
+            @DefaultValue("10000") int cdiCollectionElementsWarning,
+            @DefaultValue("50") int duplicateStringMinCopies,
+            @DefaultValue("2000000") int maxStringsScanned
+    ) {
     }
 
     /**

@@ -8,6 +8,7 @@ import com.poludnitsa.inspector.api.dto.GcTriggerResultDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.JvmProcessDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
+import com.poludnitsa.inspector.api.dto.MetricsPointDto;
 import com.poludnitsa.inspector.api.dto.RemoteJmxConnectRequestDto;
 import com.poludnitsa.inspector.api.dto.SelectProcessRequestDto;
 import com.poludnitsa.inspector.common.OperationRejectedException;
@@ -91,6 +92,12 @@ public class ProcessControlController {
     @GetMapping("/{pid}/metrics")
     public ResponseEntity<LiveMetricsPayloadDto> latestMetrics(@PathVariable long pid) {
         return collector.latest(pid).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    /** Compact history of the live metrics (oldest first) for the initial fill of the charts. */
+    @GetMapping("/{pid}/metrics/history")
+    public List<MetricsPointDto> metricsHistory(@PathVariable long pid) {
+        return collector.history(pid);
     }
 
     /** Quick {@code GC.class_histogram -all}: no forced Full GC, but a safepoint heap walk on the target. */

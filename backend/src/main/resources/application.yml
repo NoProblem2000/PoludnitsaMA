@@ -12,9 +12,9 @@ spring:
       write-dates-as-timestamps: false
   servlet:
     multipart:
-      # Allow uploading existing .hprof files for offline analysis.
-      max-file-size: -1
-      max-request-size: -1
+      # Report files (.json.gz) can be large.
+      max-file-size: 512MB
+      max-request-size: 512MB
 
 # Defaults shown; see InspectorProperties for every option.
 inspector:

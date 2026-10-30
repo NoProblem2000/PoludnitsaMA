@@ -47,7 +47,8 @@ public class SnapshotStore {
     private static final int FORMAT_VERSION = 1;
     private static final DateTimeFormatter ID_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
             .withZone(ZoneOffset.UTC);
-    private static final Comparator<SnapshotRecord> CHRONOLOGICAL =
+    /** Creation order; the sequence breaks ties between snapshots created within one clock tick. */
+    public static final Comparator<SnapshotRecord> CHRONOLOGICAL =
             Comparator.comparing(SnapshotRecord::createdAt).thenComparingLong(SnapshotRecord::sequence);
 
     /** File format of a persisted or exported snapshot. */
@@ -83,6 +84,27 @@ public class SnapshotStore {
                 return record;
             }
         }
+    }
+
+    /**
+     * Registers a snapshot read from a report file. Keeps its id when it is valid and free, otherwise assigns a new
+     * one, so imported snapshots never overwrite local ones.
+     */
+    public SnapshotRecord importSnapshot(SnapshotSummaryDto summary, SnapshotData data) {
+        String id = summary.snapshotId();
+        while (id == null || !ID.matcher(id).matches() || records.containsKey(id)) {
+            id = "imp-" + ID_TIME.format(Instant.now()) + "-"
+                    + HexFormat.of().toHexDigits((short) ThreadLocalRandom.current().nextInt());
+        }
+        SnapshotRecord record = SnapshotRecord.restored(summary, data, id, true);
+        records.put(id, record);
+        try {
+            persist(record);
+        } catch (IOException e) {
+            log.warn("Could not persist imported snapshot {}: {}", id, e.toString());
+        }
+        evictOldest();
+        return record;
     }
 
     public Optional<SnapshotRecord> find(String id) {

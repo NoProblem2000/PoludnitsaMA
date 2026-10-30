@@ -26,7 +26,7 @@ final class SnapshotDataFactory {
                     entry.bytes(), null, entry.definitionCount(), null));
         }
         return new SnapshotData(histogram.totalInstances(), classes.size(), histogram.totalBytes(), 0, false,
-                classes, List.of(), groups(classes, histogram.totalBytes()));
+                classes, List.of(), groups(classes, histogram.totalBytes()), List.of(), List.of());
     }
 
     /** One entry per {@link MemoryGroup}, in declaration order, including empty groups. */

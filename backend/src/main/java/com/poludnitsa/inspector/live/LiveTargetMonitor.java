@@ -6,6 +6,7 @@ import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
 import com.poludnitsa.inspector.api.dto.MemoryPoolDto;
 import com.poludnitsa.inspector.api.dto.MemoryUsageDto;
+import com.poludnitsa.inspector.api.dto.MetricsPointDto;
 import com.poludnitsa.inspector.api.dto.TargetStatusDto;
 import com.poludnitsa.inspector.common.InspectorException;
 import com.poludnitsa.inspector.common.OperationRejectedException;
@@ -19,6 +20,7 @@ import com.poludnitsa.inspector.jmx.MBeanNames;
 import com.poludnitsa.inspector.jmx.TargetMetadata;
 import java.io.IOException;
 import java.lang.management.MemoryUsage;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +67,7 @@ final class LiveTargetMonitor {
     private final GcOverheadTracker overhead = new GcOverheadTracker(60_000);
     private final Set<LiveMetricsListener> listeners = new CopyOnWriteArraySet<>();
     private final AtomicBoolean histogramInFlight = new AtomicBoolean();
+    private final ArrayDeque<MetricsPointDto> history = new ArrayDeque<>();
 
     // Touched by the sampling task only.
     private final Map<String, long[]> previousCollectorCounters = new HashMap<>();
@@ -127,6 +130,22 @@ final class LiveTargetMonitor {
 
     TargetStatusDto status() {
         return status;
+    }
+
+    /** Compact history, oldest first, at most {@code historySize} points. */
+    List<MetricsPointDto> history() {
+        synchronized (history) {
+            return List.copyOf(history);
+        }
+    }
+
+    private void remember(MetricsPointDto point) {
+        synchronized (history) {
+            history.addLast(point);
+            while (history.size() > Math.max(1, props.historySize())) {
+                history.removeFirst();
+            }
+        }
     }
 
     void setSelected(boolean selected) {
@@ -211,6 +230,7 @@ final class LiveTargetMonitor {
             RawSample raw = connections.call(pid, this::readRaw);
             LiveMetricsPayloadDto payload = buildPayload(raw);
             latest = payload;
+            remember(MetricsPointDto.of(payload));
             publishStatus(ConnectionState.CONNECTED, null);
             for (LiveMetricsListener listener : listeners) {
                 deliverMetrics(listener, payload);

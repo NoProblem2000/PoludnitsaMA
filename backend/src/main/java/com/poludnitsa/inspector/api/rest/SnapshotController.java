@@ -3,6 +3,10 @@ package com.poludnitsa.inspector.api.rest;
 import com.poludnitsa.inspector.api.dto.ClassStatsDto;
 import com.poludnitsa.inspector.api.dto.DiskSpaceCheckDto;
 import com.poludnitsa.inspector.api.dto.DominatorNodeDto;
+import com.poludnitsa.inspector.api.dto.FindingCategory;
+import com.poludnitsa.inspector.api.dto.InspectionFindingDto;
+import com.poludnitsa.inspector.api.dto.InspectionRuleRunDto;
+import com.poludnitsa.inspector.api.dto.Severity;
 import com.poludnitsa.inspector.api.dto.HeapDumpRequestDto;
 import com.poludnitsa.inspector.api.dto.HistogramSnapshotRequestDto;
 import com.poludnitsa.inspector.api.dto.MemoryGroup;
@@ -131,6 +135,23 @@ public class SnapshotController {
     @GetMapping("/{id}/groups")
     public List<MemoryGroupStatsDto> groups(@PathVariable @Pattern(regexp = ID) String id) {
         return readyData(id).groups();
+    }
+
+    /** Leak inspection findings, most severe first. */
+    @GetMapping("/{id}/findings")
+    public List<InspectionFindingDto> findings(@PathVariable @Pattern(regexp = ID) String id,
+                                               @RequestParam(required = false) Severity severity,
+                                               @RequestParam(required = false) FindingCategory category) {
+        return readyData(id).findings().stream()
+                .filter(f -> severity == null || f.severity() == severity)
+                .filter(f -> category == null || f.category() == category)
+                .toList();
+    }
+
+    /** How each inspection rule ran (duration, truncated, errors). */
+    @GetMapping("/{id}/inspections")
+    public List<InspectionRuleRunDto> inspections(@PathVariable @Pattern(regexp = ID) String id) {
+        return readyData(id).inspections();
     }
 
     /** The analysed snapshot as gzipped JSON, for offline review or attaching to a ticket. */
