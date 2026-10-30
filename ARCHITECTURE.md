@@ -25,7 +25,7 @@ PoludnitsaMA/
  │    │                                                                           │
  │  ┌─┴───────────────────────── Inspector JVM ────────────────────────────────┐  │
  │  │ discovery ─► attach/jmx ─► live (sampler, histogram, leak scoring)       │  │
- │  │                     │       └─► STOMP /topic/metrics/{pid}  ───────────► │──┼─► Browser
+ │  │                     │       └─► WebSocket /ws/live (pid)   ───────────► │──┼─► Browser
  │  │                     ├─► jfr  (FlightRecorderMXBean → .jfr файл → parse)  │  │   (React)
  │  │                     └─► dump (HotSpotDiagnosticMXBean.dumpHeap)          │  │
  │  │                              └─► heap (NetBeans profiler lib, disk index)│  │
@@ -37,8 +37,20 @@ PoludnitsaMA/
 Анализатор **никогда** не измеряет сам себя: все метрики берутся через `MBeanServerConnection`
 целевого PID. `jdk.jfr.consumer.RecordingStream` запрещён (он стримит события *текущей* JVM).
 Для JFR используется `jdk.management.jfr:type=FlightRecorder` целевого процесса:
-`newRecording → startRecording → stopRecording → openStream/readStream` → файл на диске →
+`newRecording → setRecordingOptions/Settings → startRecording`, затем каждый poll
+`cloneRecording(id, stop=true) → openStream(startTime) / readStream` → файл на диске →
 офлайн-разбор через `jdk.jfr.consumer.RecordingFile` (читает файл, а не текущую JVM).
+Сам анализатор защищён от самомониторинга явно: `JmxConnectionManager` отклоняет собственный PID
+(и remote-endpoint, указывающий на него) с кодом `SELF_MONITORING_FORBIDDEN`.
+
+### Live Leak Radar
+`GC.class_histogram -all` (через `DiagnosticCommandMBean.gcClassHistogram`) **не** вызывает Full GC, но
+считает и недостижимые объекты. Объекты освобождаются только сборкой, поэтому между двумя GC класс может
+только расти: первая гистограмма после каждого GC — лучшая оценка live-set. Тренды (OLS, монотонность, R²)
+строятся только по post-GC сэмплам в окнах 1/5/15 мин; сэмплы после old-gen reclamation (old/full GC или
+падение `CollectionUsage` Old-пула — mixed GC в G1) дают «streak выживания». Без двух old-GC в окне
+score ограничен 80. Обход кучи — safepoint-пауза: её длительность в каждом payload, а интервал радара
+автоматически удваивается, если гистограмма дольше `histogram-pause-budget`.
 
 ---
 
@@ -47,14 +59,14 @@ PoludnitsaMA/
 | Пакет | Ответственность |
 |---|---|
 | `InspectorApplication` | Точка входа Spring Boot. |
-| `config` | `InspectorProperties` (`@ConfigurationProperties`: интервалы семплинга, каталог дампов, коэффициент запаса диска 2.5), `WebSocketConfig` (STOMP, simple broker `/topic`), `JacksonConfig`, `WebConfig` (SPA fallback на `index.html`, CORS для `vite dev`). |
+| `config` | `InspectorProperties` (`@ConfigurationProperties`: интервалы семплинга, каталог дампов, коэффициент запаса диска 2.5), `WebSocketConfig` (сырой WebSocket `/ws/live`), `LocalOriginFilter` (отклоняет запросы и WS-handshake с чужим `Origin`: вкладка браузера не может дёрнуть GC/дамп), `WebConfig` (SPA fallback на `index.html`). |
 | `api.dto` | Все DTO (Java `record`) и enum'ы контракта backend ↔ frontend. **Единственный** пакет, который «видит» фронтенд. |
 | `api.rest` | REST-контроллеры: `ProcessController` (`/api/processes`), `LiveController` (start/stop семплинга), `SnapshotController` (`/api/snapshots`: снять дамп, загрузить .hprof, статус индексации), `HeapController` (dominator tree, instances, GC root paths — постранично), `InspectionController`, `ReportController` (экспорт/импорт JSON/HTML). `GlobalExceptionHandler` → `ApiErrorDto`. |
-| `api.ws` | Публикация в STOMP-топики: `/topic/metrics/{pid}`, `/topic/snapshots/{id}/progress`, `/topic/inspections/{id}`. |
-| `discovery` | `JvmProcessScanner` (`VirtualMachine.list()` + `ProcessHandle`), `ProcessClassifier` (WILDFLY: `jboss-modules.jar` / `org.jboss.as.*`; HAZELCAST: `com.hazelcast.core.server.HazelcastMemberStarter`, `hazelcast*.jar`; иначе OTHER_JAVA). Исключает собственный PID. |
-| `jmx` | `JmxConnectionManager` — attach по PID, `startLocalManagementAgent()`, кеш `JMXConnector` на PID, реконнект, закрытие при остановке процесса. `TargetMBeans` — типизированные прокси: `MemoryMXBean`, `MemoryPoolMXBean`, `GarbageCollectorMXBean`, `HotSpotDiagnosticMXBean`, `DiagnosticCommandMBean` (`gcClassHistogram`), `FlightRecorderMXBean`. |
-| `live` | `LiveMetricsSampler` (`@Scheduled`, раз в N сек), `ClassHistogramParser` (разбор текста `GC.class_histogram`), `HistogramRingBuffer` (скользящее окно снимков на PID), `ClassGrowthAnalyzer` (линейная регрессия bytes/min, монотонность роста, рост после old-GC) → `LeakProbabilityScorer` (0..100). |
-| `jfr` | `RemoteJfrService` — управление записью **в целевом** процессе через `FlightRecorderMXBean`, выгрузка чанков в файл; `JfrFileAnalyzer` — `RecordingFile` (allocation samples, `jdk.OldObjectSample`, GC pauses). |
+| `api.ws` | `LiveMetricsWebSocketHandler` — `/ws/live`, один PID на соединение: `{"action":"subscribe","pid":N}` / `unsubscribe` / `ping` → `LiveStreamMessageDto` (SUBSCRIBED, METRICS, STATUS, ERROR, PONG). Отправка через `ConcurrentWebSocketSessionDecorator` (DROP старых сэмплов у медленного клиента). |
+| `discovery` | `JvmDiscoveryService` (`VirtualMachine.list()`, параллельные attach-пробы системных свойств без запуска агента, кеш по PID + start instant, ручные remote JMX `host:port`), `ProcessClassifier` (WILDFLY → HAZELCAST по main class → SPRING_BOOT → HAZELCAST по `hazelcast.*` member-свойствам → STANDARD_JVM), `ManifestReader` (manifest `java -jar`). Собственный PID скрыт. |
+| `jmx` | `JmxConnectionManager` — attach + `startLocalManagementAgent()` или RMI-коннектор, одно соединение на PID, heartbeat + `JMXConnectionNotification`, реконнект с экспоненциальным backoff, защита от переиспользования PID, таймауты. `TargetMetadata` — пулы/коллекторы/наличие опциональных MBean (читается раз на соединение). `GcCollectorClassifier`, `MemoryPoolClassifier`, `AttachErrorHints` (подсказки: другой OS-пользователь, PrivateTmp, jboss-logmanager). |
+| `live` | `LiveMemoryCollectorService` (мониторит PID, пока есть подписчики или он выбран активным, + grace), `LiveTargetMonitor` (1 c: Memory/Pools/GC bulk `getAttributes`, GC overhead и частота за минуту, allocation rate из `TotalThreadAllocatedBytes`), `HistogramFetcher` + `ClassHistogramParser`, `LeakRadar` + `LeakScorer` (см. выше). |
+| `jfr` | `JfrAllocationSampler` — запись **в целевом** процессе (`ThreadAllocationStatistics` + `ObjectAllocationSample` без стеков, `maxAge`/`maxSize`, закрытие осиротевших записей), `JfrAllocationAggregator` — allocation rate и топ аллоцирующих классов. |
 | `dump` | `HeapDumpService` — `DiskSpaceGuard` (`usableSpace > 2.5 × heapUsed` целевой JVM, иначе 507), `HotSpotDiagnosticMXBean.dumpHeap(path, live)`: `live=false` — без Full GC (безопасно для Hazelcast heartbeat), `live=true` — с Full GC (точнее, но STW-пауза). Предупреждение UI об ожидаемой паузе. |
 | `heap` | `HprofIndexService` — `HeapFactory.createHeap(file)` (NetBeans profiler lib: дисковые индексы + mmap, без загрузки .hprof в RAM), асинхронная индексация в отдельном executor'е; `SnapshotRegistry` (in-memory: id → `Heap` + summary); `DominatorTreeService` (retained size, ленивые дети, пагинация); `GcRootPathResolver` (кратчайший путь до GC root, с ограничением глубины); `PackageCategorizer`. |
 | `inspection` | SPI `HeapInspection` (`id()`, `category()`, `run(HeapContext) → List<InspectionFindingDto>`), `InspectionEngine`. Правила по подпакетам: `rules.jakarta` (ThreadLocal leak в пуле `default-threads`, ClassLoader leak после redeploy — `ModuleClassLoader` без живого deployment, рост `HttpSession`, CDI `@Dependent` в `@ApplicationScoped`, незакрытые `EntityManager`), `rules.hazelcast` (near-cache без eviction, `ClientMessage`/invocation backlog, неснятые `EntryListener`/`MembershipListener`, `HazelcastInstance` на запрос), `rules.jvm` (дубликаты `String`, пустые коллекции, `byte[]` overhead, Finalizer queue, разреженные `HashMap`, DirectByteBuffer). |
@@ -81,7 +93,7 @@ src/
 ├── api/
 │   ├── types.ts            # TS-зеркало Java DTO (1:1 с api.dto)
 │   ├── http.ts             # fetch-обёртка, ApiError
-│   ├── stomp.ts            # @stomp/stompjs клиент, подписки на /topic/*
+│   ├── liveSocket.ts       # WebSocket /ws/live: subscribe/unsubscribe, авто-реконнект
 │   └── endpoints/          # processes.ts, snapshots.ts, heap.ts, inspections.ts, reports.ts
 ├── store/                  # Zustand
 │   ├── processStore.ts     # список JVM, выбранный PID

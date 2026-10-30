@@ -17,21 +17,27 @@ class DtoJsonContractTest {
     private ObjectMapper mapper;
 
     @Test
-    void liveMetricsPayloadRoundTrips() throws Exception {
+    void liveStreamMessageRoundTrips() throws Exception {
+        var suspect = new ClassGrowthSuspectDto("com.acme.Cache$Entry", PackageCategory.APPLICATION, 1000, 32_000,
+                50, 1600, 87, true, 3, List.of(new GrowthWindowDto(5, 12, 1600, 50, 0.9, 0.97)));
+        var jfr = new JfrAllocationStatsDto(true, "jvm-leak-inspector-alloc-1-abc", 1L, 2L, 1.5e6,
+                List.of(new AllocatingClassDto("byte[]", PackageCategory.PRIMITIVE_OR_ARRAY, 1e6, 40)), null);
         var payload = new LiveMetricsPayloadDto(
                 4711L, 1_700_000_000_000L,
                 new MemoryUsageDto(256L, 128L, 256L, 1024L),
                 new MemoryUsageDto(0L, 64L, 80L, -1L),
-                List.of(new MemoryPoolDto("Metaspace", MemoryPoolType.NON_HEAP, 50L, 60L, -1L, null)),
-                List.of(new GcCollectorMetricsDto("G1 Young Generation", GcGeneration.YOUNG, 10, 120, 1, 12, 12L)),
-                1.5, null,
-                List.of(new ClassGrowthSuspectDto("com.acme.Cache$Entry", PackageCategory.APPLICATION,
-                        1000, 32_000, 50, 1600, 87)));
+                List.of(new MemoryPoolDto("Metaspace", MemoryPoolType.NON_HEAP, MemoryPoolKind.METASPACE,
+                        50L, 60L, -1L, null)),
+                List.of(new GcCollectorMetricsDto("G1 Young Generation", GcGeneration.YOUNG, true,
+                        10, 120, 1, 12, 12L)),
+                1.5, 12.0, 2.5e6, null, 35L, 10_000L, List.of(suspect), jfr);
+        var message = LiveStreamMessageDto.metrics(payload);
 
-        String json = mapper.writeValueAsString(payload);
+        String json = mapper.writeValueAsString(message);
 
-        assertThat(json).contains("\"histogramTimestampEpochMs\":null", "\"leakProbabilityScore\":87");
-        assertThat(mapper.readValue(json, LiveMetricsPayloadDto.class)).isEqualTo(payload);
+        assertThat(json).contains("\"type\":\"METRICS\"", "\"histogramTimestampEpochMs\":null",
+                "\"leakProbabilityScore\":87", "\"kind\":\"METASPACE\"");
+        assertThat(mapper.readValue(json, LiveStreamMessageDto.class)).isEqualTo(message);
     }
 
     @Test
@@ -52,8 +58,17 @@ class DtoJsonContractTest {
     }
 
     @Test
+    void remoteRequestNeverPrintsPassword() {
+        var request = new RemoteJmxConnectRequestDto("127.0.0.1:9010", null, "monitor", "s3cret");
+
+        assertThat(request.toString()).doesNotContain("s3cret");
+        assertThat(request.isExactlyOneEndpoint()).isTrue();
+        assertThat(new RemoteJmxConnectRequestDto("h:1", "service:jmx:x", null, null).isExactlyOneEndpoint()).isFalse();
+    }
+
+    @Test
     void leakScoreOutOfRangeIsRejected() {
-        assertThatThrownBy(() -> new ClassGrowthSuspectDto("X", PackageCategory.JDK, 0, 0, 0, 0, 101))
+        assertThatThrownBy(() -> new ClassGrowthSuspectDto("X", PackageCategory.JDK, 0, 0, 0, 0, 101, false, 0, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

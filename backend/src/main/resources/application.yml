@@ -16,6 +16,22 @@ spring:
       max-file-size: -1
       max-request-size: -1
 
+# Defaults shown; see InspectorProperties for every option.
+inspector:
+  live:
+    sample-interval: 1s          # MemoryMXBean / pools / GC polling
+    histogram-interval: 10s      # GC.class_histogram -all for the leak radar (no Full GC, safepoint heap walk)
+    histogram-max-interval: 2m   # the interval doubles while histograms exceed the pause budget
+    histogram-pause-budget: 500ms
+    leak-candidate-threshold: 60
+  jmx:
+    connect-timeout: 15s
+    reconnect-max-backoff: 30s
+  jfr:
+    poll-interval: 10s           # each poll rotates the target's JFR chunk
+    max-age: 3m
+    max-size: 64MB
+
 logging:
   level:
     com.poludnitsa.inspector: INFO

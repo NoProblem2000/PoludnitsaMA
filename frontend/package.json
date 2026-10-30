@@ -13,7 +13,6 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@stomp/stompjs": "^7.0.0",
     "@tanstack/react-virtual": "^3.10.8",
     "clsx": "^2.1.1",
     "echarts": "^5.5.1",
