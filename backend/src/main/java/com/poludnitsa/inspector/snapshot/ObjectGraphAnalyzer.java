@@ -1,15 +1,20 @@
 package com.poludnitsa.inspector.snapshot;
 
+import com.poludnitsa.inspector.api.dto.ClassLoaderStatsDto;
 import com.poludnitsa.inspector.api.dto.ClassSampleDto;
 import com.poludnitsa.inspector.api.dto.ClassStatsDto;
 import com.poludnitsa.inspector.api.dto.DominatorNodeDto;
 import com.poludnitsa.inspector.api.dto.MemoryGroup;
 import com.poludnitsa.inspector.api.dto.PackageCategory;
+import com.poludnitsa.inspector.api.dto.RetentionPathDto;
 import com.poludnitsa.inspector.api.dto.SnapshotStatus;
 import com.poludnitsa.inspector.common.JvmTypeNames;
 import com.poludnitsa.inspector.common.PackageCategorizer;
 import com.poludnitsa.inspector.config.InspectorProperties;
+import com.poludnitsa.inspector.heap.ClassLoaderGrouping;
 import com.poludnitsa.inspector.heap.GcRootPathResolver;
+import com.poludnitsa.inspector.heap.HeapReader;
+import com.poludnitsa.inspector.heap.RetentionPathSampler;
 import com.poludnitsa.inspector.inspection.LeakHeuristicsEngine;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -37,13 +42,20 @@ import org.springframework.stereotype.Component;
  * file and builds its indexes as files in {@code <dump>.nbcache/}. On top of that it computes the dominator tree
  * (retained sizes), the top objects and classes by retained size, and shortest GC root paths for them.
  *
- * <p>The returned {@link SnapshotData} holds no reference into the NetBeans heap, so the heap and its mapped
- * buffers become garbage as soon as this method returns and the files can be deleted.
+ * <p>The returned {@link SnapshotData} holds no reference into the NetBeans heap. The {@link Analysis} also carries the
+ * open heap: dropped by the caller, it and its mapped buffers become garbage and the files can be deleted; kept, it
+ * answers OQL queries and on-demand GC root paths ({@link OpenHeapRegistry}).
  */
 @Component
 public class ObjectGraphAnalyzer {
 
+    /** The analysis and the heap it was computed on (still open: drop it to release the files). */
+    public record Analysis(SnapshotData data, Heap heap) {
+    }
+
     private static final Logger log = LoggerFactory.getLogger(ObjectGraphAnalyzer.class);
+    /** search limit for sampled retention paths: sampled objects of a dump without Full GC may be garbage */
+    private static final int SAMPLE_SEARCH_LIMIT = 20_000;
 
     private final InspectorProperties.Snapshots props;
     private final LeakHeuristicsEngine engine;
@@ -54,7 +66,7 @@ public class ObjectGraphAnalyzer {
     }
 
     /** Runs on the calling thread; {@code record} receives phases and live progress. */
-    public SnapshotData analyze(Path hprof, SnapshotRecord record) throws IOException {
+    public Analysis analyze(Path hprof, SnapshotRecord record) throws IOException {
         // NetBeans reports progress through a model bound to the thread that does the work.
         BoundedRangeModel progress = HeapProgress.getProgress();
         record.progressSource(() -> percent(progress));
@@ -113,22 +125,37 @@ public class ObjectGraphAnalyzer {
                 }
             }
 
+            record.phase(SnapshotStatus.ANALYZING, "Sampling retention paths of the top classes");
+            RetentionPathSampler sampler = new RetentionPathSampler(
+                    new GcRootPathResolver(heap, props.maxPathDepth(), SAMPLE_SEARCH_LIMIT),
+                    props.retentionSamplesPerClass());
+            long retentionDeadline = System.nanoTime() + props.retentionPathBudget().toNanos();
+            for (int i = 0; i < withSample && System.nanoTime() < retentionDeadline; i++) {
+                ClassAccumulator accumulator = ranked.get(i);
+                accumulator.retentionPaths = sampler.sample(accumulator.definitions, retentionDeadline);
+            }
+
             List<ClassStatsDto> classStats = new ArrayList<>(ranked.size());
             for (ClassAccumulator accumulator : ranked) {
                 classStats.add(accumulator.toDto());
             }
 
-            // Inspections need the open heap: after this method the raw dump is deleted.
+            record.phase(SnapshotStatus.ANALYZING, "Grouping memory by class loader and JBoss module");
+            List<ClassLoaderStatsDto> classLoaders = ClassLoaderGrouping.group(heap, new HeapReader(heap),
+                    props.maxClassLoaders());
+
+            // Inspections need the open heap: after this method the raw dump is usually deleted.
             LeakHeuristicsEngine.InspectionOutcome inspections = engine.inspect(heap, totalBytes, paths,
                     message -> record.phase(SnapshotStatus.ANALYZING, message));
 
             SnapshotData data = new SnapshotData(totalInstances, classStats.size(), totalBytes, gcRoots, true,
                     classStats, dominators, SnapshotDataFactory.groups(classStats, totalBytes),
-                    inspections.findings(), inspections.runs());
+                    inspections.findings(), inspections.runs(), classLoaders);
             record.analysed(millisSince(analysisStarted), data);
-            log.info("Analysed {}: {} objects, {} classes, {} bytes, {} GC roots, {} findings", hprof,
-                    totalInstances, classStats.size(), totalBytes, gcRoots, inspections.findings().size());
-            return data;
+            log.info("Analysed {}: {} objects, {} classes, {} bytes, {} GC roots, {} class loaders, {} findings",
+                    hprof, totalInstances, classStats.size(), totalBytes, gcRoots, classLoaders.size(),
+                    inspections.findings().size());
+            return new Analysis(data, heap);
         } finally {
             record.progressSource(null);
         }
@@ -212,6 +239,7 @@ public class ObjectGraphAnalyzer {
         long shallow;
         long retained;
         ClassSampleDto sample;
+        List<RetentionPathDto> retentionPaths = List.of();
 
         ClassAccumulator(String name) {
             this.name = name;
@@ -220,7 +248,7 @@ public class ObjectGraphAnalyzer {
         ClassStatsDto toDto() {
             PackageCategory category = PackageCategorizer.categorize(name);
             return new ClassStatsDto(name, category, MemoryGroup.of(category), instances, shallow, retained,
-                    definitions.size(), sample);
+                    definitions.size(), sample, retentionPaths);
         }
     }
 }

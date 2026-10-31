@@ -35,6 +35,7 @@ public final class SnapshotRecord {
     private String errorMessage;
     private SnapshotData data;
     private boolean imported;
+    private Instant heapExpiresAt;
 
     SnapshotRecord(String id, SnapshotKind kind, long pid, String displayName, ProcessType processType,
                    Instant createdAt, boolean liveObjectsOnly) {
@@ -142,6 +143,19 @@ public final class SnapshotRecord {
         progressSource = null;
     }
 
+    /** The dump is open for queries until {@code expiresAt} (moved forward on every use). */
+    synchronized void heapOpened(Instant expiresAt) {
+        heapExpiresAt = expiresAt;
+    }
+
+    synchronized void heapClosed() {
+        heapExpiresAt = null;
+    }
+
+    public synchronized boolean heapOpen() {
+        return heapExpiresAt != null;
+    }
+
     synchronized void fail(String message) {
         status = SnapshotStatus.FAILED;
         progressMessage = "Failed";
@@ -181,6 +195,6 @@ public final class SnapshotRecord {
                 current == null ? 0 : current.totalHeapBytes(),
                 current == null ? 0 : current.gcRootCount(),
                 current != null && current.retainedSizesAvailable(),
-                errorMessage, imported);
+                errorMessage, imported, heapExpiresAt != null, heapExpiresAt);
     }
 }

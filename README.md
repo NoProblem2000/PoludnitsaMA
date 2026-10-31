@@ -6,12 +6,18 @@ Client**, работающих на том же bare-metal хосте или VM.
 объясняет утечки эвристиками, знающими WildFly, CDI, Hibernate, Undertow и Hazelcast, с примерами исправления.
 
 * **Live Memory & Traffic** — пулы кучи, таймлайн GC, Leak Radar по `GC.class_histogram` (без Full GC).
-* **Leak Heuristics Advisor** — 9 инспекций (ClassLoader деплоймента после redeploy, ThreadLocal в потоках пула,
+* **Leak Heuristics Advisor** — 11 инспекций (ClassLoader деплоймента после redeploy, ThreadLocal в потоках пула,
   несовпадение CDI-скоупов, раздутый persistence context Hibernate, HTTP-сессии Undertow, сериализованные данные и
-  слушатели Hazelcast, неограниченные коллекции, дубликаты строк и массивов): виновник, путь до GC Root, почему течёт и
+  слушатели Hazelcast, неограниченные коллекции, дубликаты строк и массивов, пустые и разреженные коллекции,
+  упакованные примитивы): виновник, путь до GC Root, почему течёт и
   как исправить.
-* **Dominator Tree & Sunburst** — кто держит кучу: по подсистемам и классам-владельцам.
-* **Snapshot Comparison** — что выросло и что освободилось между двумя снапшотами.
+* **Dominator Tree & Sunburst** — плюс группировки By Package, By ClassLoader и By JBoss Module.
+* **Snapshot Comparison** — что выросло и что освободилось между двумя снапшотами. Для выросших классов —
+  пути удержания: через какие корни держится дельта.
+* **OQL Console** — запросы `select … from … where …` (диалект VisualVM) к дампу, оставленному открытым, и пути
+  до GC Root любого объекта с учётом или без weak / soft / phantom / finalizer-ссылок.
+* **Кто создаёт объекты** — горячие точки и стеки аллокаций из JFR (`jdk.ObjectAllocationSample`, опционально TLAB-события)
+  в деталях класса Leak Radar.
 * **Отчёты** — JSON (открывается в этом UI на любом компьютере, офлайн) и автономный HTML.
 
 Лицензия — [Apache License 2.0](LICENSE); встроенные компоненты перечислены в [NOTICE](NOTICE).
@@ -136,9 +142,17 @@ java -Xms256m -Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Dfile.encoding
 | `inspector.snapshots.max-snapshots` | `20` | самые старые завершённые снапшоты вытесняются |
 | `inspector.live.sample-interval` | `1s` | опрос MBean'ов |
 | `inspector.live.histogram-interval` | `10s` | гистограммы Leak Radar; удваивается до `histogram-max-interval` (`2m`), если гистограмма дольше `histogram-pause-budget` (`500ms`) |
+| `inspector.oql.enabled` | `true` | разрешить открытые дампы и OQL |
+| `inspector.oql.idle-timeout` | `30m` | открытый дамп закрывается и удаляется после простоя |
+| `inspector.oql.max-open-heaps` | `1` | открытых дампов одновременно; лишний закрывает самый старый |
+| `inspector.oql.query-timeout` | `60s` | запрос отменяется после этого |
+| `inspector.jfr.tlab-events` | `false` | писать `ObjectAllocationInNewTLAB`/`OutsideTLAB` со стеками: полнее, но заметный оверхед |
 
 ## Безопасная работа в продакшене
 
+* **OQL** выполняется как JavaScript (Nashorn) в JVM инспектора. Скрипты изолированы: доступны только классы модели
+  кучи, `Java.type`, `Packages`, `java.*` и объект движка закрыты; при неактивной песочнице запросы отклоняются.
+  Открытый дамп занимает диск (2.5 × кучи цели) до закрытия — кнопка «Закрыть дамп» или 30 минут простоя.
 * **Quick Histogram** (`GC.class_histogram -all`): без Full GC, пауза safepoint — от миллисекунд до сотен мс.
 * **Deep Heap Dump**: stop-the-world на всё время записи.
   *Safe Dump* (`live=false`) не вызывает Full GC — безопасный выбор рядом с heartbeat Hazelcast-клиента;

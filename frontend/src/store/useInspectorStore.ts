@@ -28,7 +28,7 @@ import {
 } from './liveSeries';
 
 export type Mode = 'live' | 'offline';
-export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff';
+export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff' | 'oql';
 /** safe: {@code dumpHeap(live=false)}, no Full GC; exact: {@code live=true}, Full GC first. */
 export type DumpMode = 'safe' | 'exact';
 export type StreamState = 'idle' | 'connecting' | 'live' | 'reconnecting' | 'offline';
@@ -92,6 +92,8 @@ export interface InspectorState {
   findings: InspectionFindingDto[];
 
   dumpMode: DumpMode;
+  /** keep the next deep dump open for OQL and on-demand GC root paths */
+  keepForQueries: boolean;
   busy: Busy;
   offlineReport: SessionReportBundle | null;
   /** the file the offline report came from, for converting it to HTML through the backend */
@@ -105,6 +107,9 @@ export interface InspectorState {
   selectProcess(pid: number | null): Promise<void>;
   setView(view: ViewId): void;
   setDumpMode(mode: DumpMode): void;
+  setKeepForQueries(keep: boolean): void;
+  /** closes the open dump of a snapshot and deletes its files */
+  closeHeap(id: string): Promise<void>;
   quickHistogram(): Promise<void>;
   checkDiskSpace(): Promise<DiskSpaceCheckDto | null>;
   deepDump(): Promise<void>;
@@ -286,6 +291,7 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
     streamState: 'idle',
     ...emptyLive,
     dumpMode: 'safe',
+    keepForQueries: false,
     busy: { histogram: false, deep: false, gc: false, export: false, report: false },
     offlineReport: null,
     offlineReportFile: null,
@@ -381,6 +387,20 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
       set({ dumpMode });
     },
 
+    setKeepForQueries(keepForQueries) {
+      set({ keepForQueries });
+    },
+
+    async closeHeap(id) {
+      try {
+        await api.snapshots.closeHeap(id);
+        toast('success', 'Дамп закрыт', 'Файлы дампа и индексов удалены с диска');
+      } catch (error) {
+        toast('error', 'Не удалось закрыть дамп', errorMessage(error));
+      }
+      await get().refreshSnapshots();
+    },
+
     async quickHistogram() {
       const pid = get().activePid;
       if (pid == null || get().busy.histogram) {
@@ -433,7 +453,7 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
       }
       setBusy('deep', true);
       try {
-        const summary = await api.snapshots.deep(pid, get().dumpMode === 'exact');
+        const summary = await api.snapshots.deep(pid, get().dumpMode === 'exact', get().keepForQueries);
         knownStatus.set(summary.snapshotId, summary.status);
         set((state) => ({ snapshots: [...state.snapshots, summary].sort(byCreation), selectedSnapshotId: summary.snapshotId }));
         ensureSnapshotPolling();

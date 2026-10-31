@@ -25,6 +25,23 @@ Backend (Java)
     Copyright 2017-2024 The Apache Software Foundation
     Apache License 2.0 - https://netbeans.apache.org/
 
+  Apache NetBeans Profiler OQL engine and its platform modules
+  (org-netbeans-modules-profiler-oql, profiler-api, api-scripting, openide-util, openide-filesystems, ...)
+    Apache NetBeans
+    Copyright 2017-2024 The Apache Software Foundation
+    Apache License 2.0 - https://netbeans.apache.org/
+
+  OpenJDK Nashorn (org.openjdk.nashorn:nashorn-core), the JavaScript engine of OQL
+    Copyright (c) 2010, 2021, Oracle and/or its affiliates
+    GNU General Public License, version 2, with the Classpath Exception -
+    https://openjdk.org/legal/gplv2+ce.html; source: https://github.com/openjdk/nashorn
+    Nashorn is distributed unmodified as a separate library jar (BOOT-INF/lib/nashorn-core-15.4.jar); the
+    Classpath Exception allows linking it with independent modules under other licenses, such as this product.
+
+  ASM (org.ow2.asm, used by Nashorn)
+    Copyright (c) 2000-2011 INRIA, France Telecom
+    BSD 3-Clause License - https://asm.ow2.io/license.html
+
   Apache Tomcat (embedded, via Spring Boot)
     Copyright 1999-2025 The Apache Software Foundation
     Apache License 2.0 - https://tomcat.apache.org/

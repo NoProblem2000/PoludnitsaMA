@@ -25,6 +25,7 @@ import com.poludnitsa.inspector.live.LiveMemoryCollectorService;
 import com.poludnitsa.inspector.snapshot.DumpFileCleaner;
 import com.poludnitsa.inspector.snapshot.HistogramSnapshotService;
 import com.poludnitsa.inspector.snapshot.ObjectGraphAnalyzer;
+import com.poludnitsa.inspector.snapshot.OpenHeapRegistry;
 import com.poludnitsa.inspector.snapshot.SafeHeapDumpService;
 import com.poludnitsa.inspector.snapshot.SnapshotData;
 import com.poludnitsa.inspector.snapshot.SnapshotDiffService;
@@ -74,7 +75,7 @@ class DeepSnapshotIntegrationTest {
         cleaner = new DumpFileCleaner(properties);
         store = new SnapshotStore(properties, mapper);
         dumps = new SafeHeapDumpService(connections, discovery, new ObjectGraphAnalyzer(properties, LeakHeuristicsEngine.withDefaultRules(properties)), store, cleaner,
-                properties);
+                new OpenHeapRegistry(cleaner, properties), properties);
         histograms = new HistogramSnapshotService(collector, discovery, store);
         diffs = new SnapshotDiffService(store);
         // Let the cache grow to a few MB.
@@ -188,7 +189,8 @@ class DeepSnapshotIntegrationTest {
     void insufficientDiskSpaceIsRejectedBeforeAnyDump() {
         InspectorProperties greedy = properties(Map.of("inspector.snapshots.disk-space-factor", "1e12"));
         SafeHeapDumpService guarded = new SafeHeapDumpService(connections, discovery,
-                new ObjectGraphAnalyzer(greedy, LeakHeuristicsEngine.withDefaultRules(greedy)), store, cleaner, greedy);
+                new ObjectGraphAnalyzer(greedy, LeakHeuristicsEngine.withDefaultRules(greedy)), store, cleaner,
+                new OpenHeapRegistry(cleaner, greedy), greedy);
         int snapshotsBefore = store.list().size();
 
         assertThatThrownBy(() -> guarded.startDeepSnapshot(target.pid(), false))

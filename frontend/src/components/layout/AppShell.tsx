@@ -3,6 +3,7 @@ import { SnapshotDiffView } from '@/features/diff/SnapshotDiffView';
 import { DominatorTreeView } from '@/features/heap/DominatorTreeView';
 import { HeuristicsAdvisorView } from '@/features/heuristics/HeuristicsAdvisorView';
 import { LiveDashboardView } from '@/features/live/LiveDashboardView';
+import { OqlConsoleView } from '@/features/oql/OqlConsoleView';
 import { ReportModal } from '@/features/reports/ReportModal';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { Sidebar } from './Sidebar';
@@ -40,6 +41,7 @@ export function AppShell() {
           {view === 'heuristics' && <HeuristicsAdvisorView />}
           {view === 'dominators' && <DominatorTreeView />}
           {view === 'diff' && <SnapshotDiffView />}
+          {view === 'oql' && <OqlConsoleView />}
         </main>
       </div>
       <SnapshotTimeline />

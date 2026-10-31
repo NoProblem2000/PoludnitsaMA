@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '@/api/endpoints';
+import { api, fetchAllClasses } from '@/api/endpoints';
 import { errorMessage } from '@/api/http';
 import type {
+  ClassLoaderStatsDto,
+  ClassStatsDto,
   DominatorNodeDto,
   InspectionFindingDto,
   InspectionRuleRunDto,
@@ -16,6 +18,7 @@ export interface DeepAnalysis {
   findings: InspectionFindingDto[];
   groups: MemoryGroupStatsDto[];
   inspections: InspectionRuleRunDto[];
+  classLoaders: ClassLoaderStatsDto[];
 }
 
 export interface DeepAnalysisState {
@@ -36,7 +39,9 @@ function fetchAnalysis(id: string): Promise<DeepAnalysis> {
       api.snapshots.findings(id),
       api.snapshots.groups(id),
       api.snapshots.inspections(id),
-    ]).then(([dominators, findings, groups, inspections]) => ({ dominators, findings, groups, inspections }));
+      api.snapshots.classLoaders(id),
+    ]).then(([dominators, findings, groups, inspections, classLoaders]) =>
+      ({ dominators, findings, groups, inspections, classLoaders }));
     pending.catch(() => cache.delete(id));
     cache.set(id, pending);
     while (cache.size > MAX_CACHED) {
@@ -75,7 +80,14 @@ export function useDeepAnalysis(snapshot: SnapshotSummaryDto | null): DeepAnalys
   const offline = useMemo<DeepAnalysis | null>(() => {
     const data = report?.snapshots.find((s) => s.summary.snapshotId === id)?.data;
     return data
-      ? { dominators: data.dominators, findings: data.findings, groups: data.groups, inspections: data.inspections }
+      ? {
+        dominators: data.dominators,
+        findings: data.findings,
+        groups: data.groups,
+        inspections: data.inspections,
+        // reports written before class loaders existed have none
+        classLoaders: data.classLoaders ?? [],
+      }
       : null;
   }, [report, id]);
   // Keyed by snapshot: until the analysis of the current id arrives it is loading, never "empty".
@@ -102,4 +114,56 @@ export function useDeepAnalysis(snapshot: SnapshotSummaryDto | null): DeepAnalys
     return { loading: false, error: null, data: null };
   }
   return state?.id === id ? { loading: false, error: state.error, data: state.data } : { loading: true, error: null, data: null };
+}
+
+// Classes of a snapshot are tens of thousands of rows: loaded only by the views that group them.
+const classCache = new Map<string, Promise<ClassStatsDto[]>>();
+
+/** Every class of a snapshot (by retained size): from the report offline, paged from the backend live. */
+export function useSnapshotClasses(snapshot: SnapshotSummaryDto | null): {
+  loading: boolean;
+  error: string | null;
+  classes: ClassStatsDto[];
+} {
+  const report = useInspectorStore((s) => s.offlineReport);
+  const id = snapshot?.snapshotId ?? null;
+  const offline = useMemo(() => report?.snapshots.find((s) => s.summary.snapshotId === id)?.data.classes ?? null,
+    [report, id]);
+  const [state, setState] = useState<{ id: string; classes: ClassStatsDto[]; error: string | null } | null>(null);
+
+  useEffect(() => {
+    if (report || id == null) {
+      return undefined;
+    }
+    let current = true;
+    let pending = classCache.get(id);
+    if (!pending) {
+      pending = fetchAllClasses(id, 'RETAINED');
+      pending.catch(() => classCache.delete(id));
+      classCache.set(id, pending);
+      while (classCache.size > 4) {
+        const oldest = classCache.keys().next().value;
+        if (oldest === undefined) {
+          break;
+        }
+        classCache.delete(oldest);
+      }
+    }
+    pending.then(
+      (classes) => current && setState({ id, classes, error: null }),
+      (error: unknown) => current && setState({ id, classes: [], error: errorMessage(error) }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [report, id]);
+
+  if (report) {
+    return { loading: false, error: null, classes: offline ?? [] };
+  }
+  if (id == null) {
+    return { loading: false, error: null, classes: [] };
+  }
+  return state?.id === id ? { loading: false, error: state.error, classes: state.classes }
+    : { loading: true, error: null, classes: [] };
 }

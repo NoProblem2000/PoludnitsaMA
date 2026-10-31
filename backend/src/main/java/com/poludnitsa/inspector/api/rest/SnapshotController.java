@@ -1,5 +1,6 @@
 package com.poludnitsa.inspector.api.rest;
 
+import com.poludnitsa.inspector.api.dto.ClassLoaderStatsDto;
 import com.poludnitsa.inspector.api.dto.ClassStatsDto;
 import com.poludnitsa.inspector.api.dto.DiskSpaceCheckDto;
 import com.poludnitsa.inspector.api.dto.DominatorNodeDto;
@@ -16,6 +17,7 @@ import com.poludnitsa.inspector.api.dto.SnapshotDiffDto;
 import com.poludnitsa.inspector.api.dto.SnapshotSummaryDto;
 import com.poludnitsa.inspector.common.OperationRejectedException;
 import com.poludnitsa.inspector.snapshot.HistogramSnapshotService;
+import com.poludnitsa.inspector.snapshot.OpenHeapRegistry;
 import com.poludnitsa.inspector.snapshot.SafeHeapDumpService;
 import com.poludnitsa.inspector.snapshot.SnapshotData;
 import com.poludnitsa.inspector.snapshot.SnapshotDiffService;
@@ -59,13 +61,15 @@ public class SnapshotController {
     private final HistogramSnapshotService histograms;
     private final SnapshotStore store;
     private final SnapshotDiffService diffs;
+    private final OpenHeapRegistry openHeaps;
 
     public SnapshotController(SafeHeapDumpService dumps, HistogramSnapshotService histograms, SnapshotStore store,
-                              SnapshotDiffService diffs) {
+                              SnapshotDiffService diffs, OpenHeapRegistry openHeaps) {
         this.dumps = dumps;
         this.histograms = histograms;
         this.store = store;
         this.diffs = diffs;
+        this.openHeaps = openHeaps;
     }
 
     @GetMapping
@@ -83,7 +87,7 @@ public class SnapshotController {
     @PostMapping("/deep")
     public ResponseEntity<SnapshotSummaryDto> deep(@Valid @RequestBody HeapDumpRequestDto request) {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(dumps.startDeepSnapshot(request.pid(), request.liveObjectsOnly()));
+                .body(dumps.startDeepSnapshot(request.pid(), request.liveObjectsOnly(), request.keepHeapOpen()));
     }
 
     @PostMapping("/histogram")
@@ -132,6 +136,12 @@ public class SnapshotController {
         return readyData(id).dominators();
     }
 
+    /** Memory by class loader; WildFly ModuleClassLoaders carry their module name. */
+    @GetMapping("/{id}/classloaders")
+    public List<ClassLoaderStatsDto> classLoaders(@PathVariable @Pattern(regexp = ID) String id) {
+        return readyData(id).classLoaders();
+    }
+
     @GetMapping("/{id}/groups")
     public List<MemoryGroupStatsDto> groups(@PathVariable @Pattern(regexp = ID) String id) {
         return readyData(id).groups();
@@ -168,6 +178,7 @@ public class SnapshotController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable @Pattern(regexp = ID) String id) {
         store.delete(id);
+        openHeaps.close(id, "snapshot deleted");
         return ResponseEntity.noContent().build();
     }
 

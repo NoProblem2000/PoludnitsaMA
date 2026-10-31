@@ -63,6 +63,7 @@ export function computeLocalDiff(
     if (deltaInstances === 0 && deltaShallow === 0 && (deltaRetained == null || deltaRetained === 0)) {
       continue;
     }
+    const grew = deltaShallow > 0 || deltaInstances > 0 || (deltaRetained != null && deltaRetained > 0);
     const isNew = instancesBefore === 0 && instancesAfter > 0;
     newClasses += isNew ? 1 : 0;
     removedClasses += instancesAfter === 0 && instancesBefore > 0 ? 1 : 0;
@@ -85,6 +86,8 @@ export function computeLocalDiff(
       deltaRetainedBytes: deltaRetained,
       newClass: isNew,
       survivalScore: survivalScore(instancesBefore, deltaInstances, bytesBefore, deltaBytes, isNew, significanceBytes, trust),
+      // grown classes: how they are held in the current snapshot
+      retentionPaths: grew && y ? y.retentionPaths ?? [] : [],
     });
   }
   return {

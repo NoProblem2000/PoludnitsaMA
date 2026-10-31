@@ -641,6 +641,29 @@ public final class HeapReader {
         return null;
     }
 
+    /**
+     * Name of the module of an {@code org.jboss.modules.ModuleClassLoader} ({@code deployment.orders.war},
+     * {@code org.hibernate:main} for jboss-modules 1.x with a non-default slot), {@code null} for other loaders.
+     */
+    public String jbossModuleName(Instance loader) {
+        Instance module = objectField(loader, "module");
+        if (module == null) {
+            return null;
+        }
+        String name = string(objectField(module, "name"), 256);
+        if (name != null) {
+            return name;
+        }
+        // jboss-modules 1.x
+        Instance identifier = objectField(module, "identifier");
+        String legacy = string(objectField(identifier, "name"), 256);
+        String slot = string(objectField(identifier, "slot"), 64);
+        if (legacy == null) {
+            return null;
+        }
+        return slot == null || "main".equals(slot) ? legacy : legacy + ":" + slot;
+    }
+
     /** JDK containers whose only job is to hold other objects. */
     public static boolean isPlumbing(String className) {
         return className.endsWith("[]")

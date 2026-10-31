@@ -7,6 +7,7 @@ import { Badge } from '@/components/common/Badge';
 import { ScoreBar } from '@/components/common/ScoreBar';
 import { buildRadarRows, type RadarRow } from '@/store/radarRows';
 import { useInspectorStore } from '@/store/useInspectorStore';
+import { AllocationStacksPanel } from './AllocationStacksPanel';
 import { palette } from '@/theme/palette';
 import { GROUP_COLOR, GROUP_LABEL } from '@/utils/categories';
 import { formatBytes, formatGrowthRate, formatNumber, formatTime, splitClassName } from '@/utils/format';
@@ -74,6 +75,7 @@ function Growth({ bytesPerMin }: { bytesPerMin: number | null }) {
 }
 
 function Details({ row, onClose }: { row: RadarRow; onClose(): void }) {
+  const live = useInspectorStore((s) => s.mode === 'live');
   return (
     <div className="border-t border-kraken-border bg-kraken-panel px-4 py-3">
       <div className="flex items-center gap-2">
@@ -104,6 +106,7 @@ function Details({ row, onClose }: { row: RadarRow; onClose(): void }) {
           </span>
         ))}
       </div>
+      {live && <AllocationStacksPanel className={row.className} />}
     </div>
   );
 }

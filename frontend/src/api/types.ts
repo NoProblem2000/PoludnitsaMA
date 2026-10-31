@@ -43,6 +43,24 @@ export type SnapshotStatus = 'DUMPING' | 'INDEXING' | 'ANALYZING' | 'READY' | 'F
 
 export type SnapshotKind = 'LIVE_HISTOGRAM' | 'DEEP';
 
+/** How a path step references the next one; everything but STRONG is the referent of a java.lang.ref.Reference. */
+export type ReferenceKind = 'STRONG' | 'WEAK' | 'SOFT' | 'PHANTOM' | 'FINALIZER';
+
+export type PathMode = 'STRONG_ONLY' | 'ALL_REFERENCES';
+
+export type ClassLoaderKind = 'BOOTSTRAP' | 'PLATFORM' | 'APPLICATION' | 'JBOSS_MODULE' | 'OTHER';
+
+export type OqlValueType =
+  | 'INSTANCE'
+  | 'CLASS'
+  | 'STRING'
+  | 'NUMBER'
+  | 'BOOLEAN'
+  | 'LIST'
+  | 'OBJECT'
+  | 'NULL'
+  | 'OTHER';
+
 export type MemoryGroup =
   | 'USER_BUSINESS_CODE'
   | 'JAKARTA_WILDFLY_INTERNAL'
@@ -257,6 +275,10 @@ export interface SnapshotSummaryDto {
   errorMessage: string | null;
   /** loaded from a report file */
   imported: boolean;
+  /** the dump is kept open for OQL and on-demand GC root paths */
+  heapOpen: boolean;
+  /** ISO-8601 instant; when an open dump is closed if unused */
+  heapExpiresAt: string | null;
 }
 
 export interface ClassSampleDto {
@@ -277,6 +299,8 @@ export interface ClassStatsDto {
   definitionCount: number;
   /** only for the top classes by retained size */
   sample: ClassSampleDto | null;
+  /** how sampled instances are held, most common shape first; top classes of deep snapshots */
+  retentionPaths: RetentionPathDto[];
 }
 
 export interface MemoryGroupStatsDto {
@@ -303,6 +327,8 @@ export interface ClassDiffDto {
   newClass: boolean;
   /** 0..100 */
   survivalScore: number;
+  /** grown classes of a deep current snapshot: how they are held there */
+  retentionPaths: RetentionPathDto[];
 }
 
 export interface SnapshotDiffDto {
@@ -348,6 +374,8 @@ export interface GcRootPathStepDto {
   referenceName: string | null;
   gcRoot: boolean;
   gcRootKind: string | null;
+  /** kind of the reference to the next step; null for the last step and in older summaries (strong) */
+  referenceKind: ReferenceKind | null;
 }
 
 export interface DominatorNodeDto {
@@ -432,6 +460,7 @@ export interface SnapshotDataDto {
   groups: MemoryGroupStatsDto[];
   findings: InspectionFindingDto[];
   inspections: InspectionRuleRunDto[];
+  classLoaders: ClassLoaderStatsDto[];
 }
 
 export interface DiffPairDto {
@@ -478,6 +507,8 @@ export interface ImportedReportDto {
 export interface HeapDumpRequestDto {
   pid: number;
   liveObjectsOnly: boolean;
+  /** keep the dump open for OQL until closed or idle */
+  keepForQueries?: boolean | null;
 }
 
 export interface AboutDto {
@@ -505,4 +536,117 @@ export interface ApiErrorDto {
   code: string;
   message: string;
   path: string;
+}
+
+/** One way the instances of a class are held: sampled GC root paths of the same shape. */
+export interface RetentionPathDto {
+  /** root first: "static CACHE in OrderService → HashMap.table → HashMap$Node[] → HashMap$Node.value" */
+  signature: string;
+  /** full path of a representative instance, root first */
+  steps: GcRootPathStepDto[];
+  sampledInstances: number;
+  /** 0..1 of the sampled instances */
+  share: number;
+}
+
+export interface ClassLoaderClassDto {
+  className: string;
+  instances: number;
+  shallowBytes: number;
+}
+
+export interface ClassLoaderStatsDto {
+  /** null for the bootstrap loader */
+  objectId: number | null;
+  loaderClassName: string;
+  /** module name when known, else the loader */
+  displayName: string;
+  /** JBoss Modules name ("deployment.order-service.war") of a JBOSS_MODULE loader */
+  moduleName: string | null;
+  kind: ClassLoaderKind;
+  classCount: number;
+  instances: number;
+  shallowBytes: number;
+  /** retained size of the loader instance (its classes, statics and what only they hold); null for bootstrap */
+  retainedBytes: number | null;
+  topClasses: ClassLoaderClassDto[];
+}
+
+export interface GcRootPathDto {
+  objectId: number;
+  mode: PathMode;
+  /** GC root first; empty when none was found within the limits */
+  steps: GcRootPathStepDto[];
+  text: string;
+  rootKind: string | null;
+  /** only strong references keep the object: it is really retained */
+  strongPathExists: boolean;
+  visitedObjects: number;
+  truncated: boolean;
+}
+
+export interface OqlQueryRequestDto {
+  query: string;
+  limit?: number | null;
+  timeoutSeconds?: number | null;
+}
+
+export interface OqlValueDto {
+  type: OqlValueType;
+  text: string;
+  objectId: number | null;
+  className: string | null;
+  shallowSize: number | null;
+  retainedSize: number | null;
+  items: OqlValueDto[] | null;
+  fields: Record<string, OqlValueDto> | null;
+  totalItems: number | null;
+}
+
+export interface OqlResultDto {
+  snapshotId: string;
+  query: string;
+  /** "value" for plain results, the property names for select { ... } */
+  columns: string[];
+  rows: OqlValueDto[][];
+  rowCount: number;
+  truncated: boolean;
+  durationMs: number;
+}
+
+export interface AllocationFrameDto {
+  className: string;
+  method: string;
+  /** -1 when unknown */
+  line: number;
+  /** application code (not JDK, server or library) */
+  application: boolean;
+}
+
+export interface AllocationStackDto {
+  /** allocating frame first */
+  frames: AllocationFrameDto[];
+  weightBytes: number;
+  samples: number;
+  /** 0..1 */
+  share: number;
+}
+
+export interface AllocationHotspotDto {
+  frame: AllocationFrameDto;
+  weightBytes: number;
+  samples: number;
+  /** 0..1 */
+  share: number;
+}
+
+export interface AllocationStacksDto {
+  pid: number;
+  className: string;
+  weightBytes: number;
+  samples: number;
+  windowMs: number;
+  hotspots: AllocationHotspotDto[];
+  stacks: AllocationStackDto[];
+  eventTypes: string[];
 }

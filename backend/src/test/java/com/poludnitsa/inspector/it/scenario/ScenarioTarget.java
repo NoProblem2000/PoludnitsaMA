@@ -3,6 +3,7 @@ package com.poludnitsa.inspector.it.scenario;
 import io.undertow.server.session.InMemorySessionManager;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,8 @@ import org.jboss.weld.contexts.unbound.ApplicationContextImpl;
  * Child JVM reproducing the WildFly / Jakarta / JVM leak patterns the inspections must diagnose: a redeployed
  * deployment class loader kept by a pool thread, business objects in ThreadLocals of {@code default task-*}
  * threads, a bloated Hibernate session, 12 000 HTTP sessions, a CDI bean with a growing cache and thousands of
- * {@code @Dependent} instances, a map with keys lacking {@code equals/hashCode}, and duplicated strings.
+ * {@code @Dependent} instances, a map with keys lacking {@code equals/hashCode}, duplicated strings, eager empty
+ * collections and boxed {@code Long}s in 80 000 customers, and a payload held only by a {@code SoftReference}.
  */
 public final class ScenarioTarget {
 
@@ -103,6 +105,39 @@ public final class ScenarioTarget {
         }
     }
 
+    /** Eager, never used collections and a boxed field, in every one of {@value #CUSTOMERS} customers. */
+    public static final class Customer {
+        final List<String> tags = new ArrayList<>(50);
+        final Map<String, String> attributes = new HashMap<>(64);
+        final Long loyaltyPoints;
+
+        Customer(long i) {
+            // HashMap allocates its table on the first put and keeps it after clear()
+            attributes.put("created", "true");
+            attributes.clear();
+            loyaltyPoints = 1_000_000L + i;
+        }
+    }
+
+    public static final class CustomerRegistry {
+        static final List<Customer> ALL = new ArrayList<>();
+        static final List<Long> RECENT_IDS = new ArrayList<>();
+
+        private CustomerRegistry() {
+        }
+    }
+
+    /** Held only by a SoftReference: not a leak, shown as softly reachable. */
+    public static final class SoftCache {
+        public static final int PAYLOAD_BYTES = 3 * 1024 * 1024 + 17;
+        static final SoftReference<byte[]> PAYLOAD = new SoftReference<>(new byte[PAYLOAD_BYTES]);
+
+        private SoftCache() {
+        }
+    }
+
+    static final int CUSTOMERS = 80_000;
+
     private ScenarioTarget() {
     }
 
@@ -115,6 +150,7 @@ public final class ScenarioTarget {
         cdi();
         badKeys();
         duplicateStrings();
+        customers();
         threadsReady.await();
         System.out.println("READY");
         System.out.flush();
@@ -202,6 +238,18 @@ public final class ScenarioTarget {
         char[] text = "ORDER_STATUS_PENDING".toCharArray();
         for (int i = 0; i < 40_000; i++) {
             StatusLog.ENTRIES.add(new AuditEntry(new String(text)));
+        }
+    }
+
+    private static void customers() {
+        for (int i = 0; i < CUSTOMERS; i++) {
+            CustomerRegistry.ALL.add(new Customer(i));
+        }
+        for (int i = 0; i < 100_000; i++) {
+            CustomerRegistry.RECENT_IDS.add(2_000_000L + i);
+        }
+        if (SoftCache.PAYLOAD.get() == null) {
+            throw new IllegalStateException("soft payload cleared");
         }
     }
 

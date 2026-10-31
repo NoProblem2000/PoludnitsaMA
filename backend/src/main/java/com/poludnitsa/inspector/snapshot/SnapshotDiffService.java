@@ -4,6 +4,7 @@ import com.poludnitsa.inspector.api.dto.ClassDiffDto;
 import com.poludnitsa.inspector.api.dto.ClassStatsDto;
 import com.poludnitsa.inspector.api.dto.MemoryGroup;
 import com.poludnitsa.inspector.api.dto.PackageCategory;
+import com.poludnitsa.inspector.api.dto.RetentionPathDto;
 import com.poludnitsa.inspector.api.dto.SnapshotDiffDto;
 import com.poludnitsa.inspector.api.dto.SnapshotKind;
 import com.poludnitsa.inspector.api.dto.SnapshotStatus;
@@ -97,9 +98,11 @@ public class SnapshotDiffService {
             int score = survivalScore(instancesBefore, deltaInstances, bytesBefore, deltaBytes, isNew,
                     significanceBytes, confidence);
             PackageCategory category = PackageCategorizer.categorize(name);
+            // How the grown class is held in the current snapshot: the roots its delta hangs on.
+            List<RetentionPathDto> retention = grew && y != null ? y.retentionPaths() : List.of();
             changed.add(new ClassDiffDto(name, category, MemoryGroup.of(category), instancesBefore, instancesAfter,
                     deltaInstances, shallowBefore, shallowAfter, deltaShallow, retainedBefore, retainedAfter,
-                    deltaRetained, isNew, score));
+                    deltaRetained, isNew, score, retention));
         }
         changed.sort(Comparator.comparingInt(ClassDiffDto::survivalScore).reversed()
                 .thenComparing(Comparator.comparingLong((ClassDiffDto d) -> Math.abs(

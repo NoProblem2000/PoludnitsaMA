@@ -1,5 +1,6 @@
 package com.poludnitsa.inspector.jfr;
 
+import com.poludnitsa.inspector.api.dto.AllocationStacksDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.common.InspectorException;
 import com.poludnitsa.inspector.common.JvmTypeNames;
@@ -36,7 +37,9 @@ import org.slf4j.LoggerFactory;
  * {@code jdk.management.jfr:type=FlightRecorder} MBean over its {@code MBeanServerConnection}.
  *
  * <p>The recording enables just {@code jdk.ThreadAllocationStatistics} (1 s period) and
- * {@code jdk.ObjectAllocationSample} (throttled, no stack traces), bounded by {@code maxAge}/{@code maxSize}. Each poll
+ * {@code jdk.ObjectAllocationSample} (throttled, with stack traces for the allocation call trees), plus optionally
+ * {@code jdk.ObjectAllocationInNewTLAB} / {@code jdk.ObjectAllocationOutsideTLAB} ({@code inspector.jfr.tlab-events}),
+ * bounded by {@code maxAge}/{@code maxSize}. Each poll
  * clones the recording with {@code stop=true} (which rotates the target's chunk, so the clone holds data up to now),
  * streams the clone's chunks since the last processed event via {@code openStream/readStream} into a local file and
  * parses that file with {@link RecordingFile}. Nothing here touches the inspector's own Flight Recorder.
@@ -46,6 +49,9 @@ public final class JfrAllocationSampler implements AutoCloseable {
     static final String RECORDING_PREFIX = "jvm-leak-inspector-alloc-";
     static final String THREAD_ALLOCATION = "jdk.ThreadAllocationStatistics";
     static final String ALLOCATION_SAMPLE = "jdk.ObjectAllocationSample";
+    static final String NEW_TLAB = "jdk.ObjectAllocationInNewTLAB";
+    static final String OUTSIDE_TLAB = "jdk.ObjectAllocationOutsideTLAB";
+    private static final int STACK_LIMIT = 20;
 
     private static final Logger log = LoggerFactory.getLogger(JfrAllocationSampler.class);
     private static final long SELF_PID = ProcessHandle.current().pid();
@@ -54,6 +60,7 @@ public final class JfrAllocationSampler implements AutoCloseable {
     private final JmxConnectionManager connections;
     private final InspectorProperties.Jfr props;
     private final JfrAllocationAggregator aggregator;
+    private final JfrAllocationStackAggregator stacks;
     private final String recordingName = RECORDING_PREFIX + SELF_PID + "-" + UUID.randomUUID().toString().substring(0, 8);
     private final Object pollLock = new Object();
     private volatile Long recordingId;
@@ -68,6 +75,7 @@ public final class JfrAllocationSampler implements AutoCloseable {
         this.connections = connections;
         this.props = props;
         this.aggregator = new JfrAllocationAggregator(props.topClasses());
+        this.stacks = new JfrAllocationStackAggregator(props.stackPolls(), props.maxStacksPerClass());
     }
 
     /** Creates and starts the recording on the target. */
@@ -134,6 +142,7 @@ public final class JfrAllocationSampler implements AutoCloseable {
                     parse(file);
                 }
                 aggregator.completePoll();
+                stacks.completePoll();
                 Long last = aggregator.lastEventEpochMs();
                 if (last != null) {
                     streamFrom = Instant.ofEpochMilli(last - 1000);
@@ -152,6 +161,15 @@ public final class JfrAllocationSampler implements AutoCloseable {
                 deleteQuietly(file);
             }
         }
+    }
+
+    /** Who allocates {@code className}: hotspots and stacks over the last {@code stackPolls} polls. */
+    public AllocationStacksDto stacks(String className) {
+        JfrAllocationStackAggregator.ClassStacks merged = stacks.stacks(className, STACK_LIMIT);
+        List<String> events = props.tlabEvents() ? List.of(ALLOCATION_SAMPLE, NEW_TLAB, OUTSIDE_TLAB)
+                : List.of(ALLOCATION_SAMPLE);
+        return new AllocationStacksDto(pid, className, merged.weightBytes(), merged.samples(), merged.windowMs(),
+                merged.hotspots(), merged.stacks(), events);
     }
 
     public JfrAllocationStatsDto snapshot() {
@@ -191,7 +209,13 @@ public final class JfrAllocationSampler implements AutoCloseable {
         settings.put(THREAD_ALLOCATION + "#period", "1 s");
         settings.put(ALLOCATION_SAMPLE + "#enabled", "true");
         settings.put(ALLOCATION_SAMPLE + "#throttle", props.objectAllocationThrottle());
-        settings.put(ALLOCATION_SAMPLE + "#stackTrace", "false");
+        settings.put(ALLOCATION_SAMPLE + "#stackTrace", "true");
+        if (props.tlabEvents()) {
+            for (String event : List.of(NEW_TLAB, OUTSIDE_TLAB)) {
+                settings.put(event + "#enabled", "true");
+                settings.put(event + "#stackTrace", "true");
+            }
+        }
         return settings;
     }
 
@@ -286,12 +310,20 @@ public final class JfrAllocationSampler implements AutoCloseable {
                     if (thread != null && thread.getJavaThreadId() > 0) {
                         aggregator.onThreadAllocation(thread.getJavaThreadId(), event.getLong("allocated"), time);
                     }
-                } else if (ALLOCATION_SAMPLE.equals(type)) {
+                } else if (ALLOCATION_SAMPLE.equals(type) || NEW_TLAB.equals(type) || OUTSIDE_TLAB.equals(type)) {
                     RecordedClass objectClass = event.getClass("objectClass");
-                    if (objectClass != null) {
-                        aggregator.onAllocationSample(JvmTypeNames.toJavaName(objectClass.getName()),
-                                event.getLong("weight"), time);
+                    if (objectClass == null) {
+                        continue;
                     }
+                    String className = JvmTypeNames.toJavaName(objectClass.getName());
+                    // the bytes one event stands for: a throttled sample's weight, a new TLAB, one large object
+                    long weight = ALLOCATION_SAMPLE.equals(type) ? event.getLong("weight")
+                            : NEW_TLAB.equals(type) ? event.getLong("tlabSize") : event.getLong("allocationSize");
+                    if (ALLOCATION_SAMPLE.equals(type)) {
+                        aggregator.onAllocationSample(className, weight, time);
+                    }
+                    stacks.onAllocation(className, JfrFrames.frames(event.getStackTrace(), props.stackDepth()), weight,
+                            time);
                 }
             }
         }

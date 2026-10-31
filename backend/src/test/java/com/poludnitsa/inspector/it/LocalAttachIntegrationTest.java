@@ -8,6 +8,8 @@ import com.poludnitsa.inspector.api.dto.ClassHistogramDto;
 import com.poludnitsa.inspector.api.dto.ConnectionState;
 import com.poludnitsa.inspector.api.dto.GcCollectorMetricsDto;
 import com.poludnitsa.inspector.api.dto.GcTriggerResultDto;
+import com.poludnitsa.inspector.api.dto.AllocationHotspotDto;
+import com.poludnitsa.inspector.api.dto.AllocationStacksDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.JvmProcessDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
@@ -174,6 +176,19 @@ class LocalAttachIntegrationTest {
         assertThat(running.error()).isNull();
         assertThat(running.allocationRateBytesPerSec()).isPositive();
         assertThat(running.topAllocatingClasses()).extracting(c -> c.className()).contains("byte[]");
+
+        // Who allocates byte[]: the loop in LeakyTarget.main, found through the allocation stacks.
+        awaitTrue(Duration.ofSeconds(30), () -> !collector.allocationStacks(target.pid(), "byte[]").hotspots().isEmpty());
+        AllocationStacksDto stacks = collector.allocationStacks(target.pid(), "byte[]");
+        assertThat(stacks.weightBytes()).isPositive();
+        assertThat(stacks.eventTypes()).contains("jdk.ObjectAllocationSample");
+        AllocationHotspotDto hotspot = stacks.hotspots().get(0);
+        assertThat(hotspot.frame().className()).isEqualTo(LeakyTarget.class.getName());
+        assertThat(hotspot.frame().method()).isEqualTo("main");
+        assertThat(hotspot.frame().line()).isPositive();
+        assertThat(hotspot.frame().application()).isTrue();
+        assertThat(hotspot.share()).isGreaterThan(0.5);
+        assertThat(stacks.stacks().get(0).frames()).isNotEmpty();
 
         JfrAllocationStatsDto stopped = collector.stopJfr(target.pid());
         assertThat(stopped.active()).isFalse();

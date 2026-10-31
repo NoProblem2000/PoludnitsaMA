@@ -19,6 +19,8 @@ import java.time.Instant;
  * @param retainedSizesAvailable  {@code true} for analysed deep snapshots
  * @param errorMessage            set only when {@link SnapshotStatus#FAILED}
  * @param imported                loaded from a report file rather than taken in this session
+ * @param heapOpen                the dump is kept open for OQL queries and on-demand GC root paths
+ * @param heapExpiresAt           when an open dump is closed if not used; {@code null} when not open
  */
 public record SnapshotSummaryDto(
         String snapshotId,
@@ -42,6 +44,20 @@ public record SnapshotSummaryDto(
         int gcRootCount,
         boolean retainedSizesAvailable,
         String errorMessage,
-        boolean imported
+        boolean imported,
+        boolean heapOpen,
+        Instant heapExpiresAt
 ) {
+    public SnapshotSummaryDto(String snapshotId, SnapshotKind kind, long sourcePid, String sourceDisplayName,
+                              ProcessType sourceProcessType, Instant createdAt, boolean liveObjectsOnly,
+                              SnapshotStatus status, int progressPercent, String progressMessage,
+                              long hprofFileSizeBytes, boolean rawDumpDeleted, Long dumpDurationMs,
+                              Long indexingDurationMs, Long analysisDurationMs, long totalInstances, int totalClasses,
+                              long totalHeapBytes, int gcRootCount, boolean retainedSizesAvailable,
+                              String errorMessage, boolean imported) {
+        this(snapshotId, kind, sourcePid, sourceDisplayName, sourceProcessType, createdAt, liveObjectsOnly, status,
+                progressPercent, progressMessage, hprofFileSizeBytes, rawDumpDeleted, dumpDurationMs,
+                indexingDurationMs, analysisDurationMs, totalInstances, totalClasses, totalHeapBytes, gcRootCount,
+                retainedSizesAvailable, errorMessage, imported, false, null);
+    }
 }

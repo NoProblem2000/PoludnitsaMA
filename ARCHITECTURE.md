@@ -146,6 +146,15 @@ src/
 * **Snapshot Comparison** — `GET /api/snapshots/diff?includeShrinking=true&limit=5000`; в офлайн-отчёте тот же
   алгоритм (`localDiff.ts`, зеркало `SnapshotDiffService`) считается в браузере для любой пары снапшотов.
 
+### Шаг 8: OQL, ссылки, группировки, стеки аллокаций
+* `GcRootPathResolver`: `STRONG_ONLY` — указатели NetBeans (они пропускают `referent` у Weak/Soft/Final/Phantom);
+  без сильного пути — обратный BFS с `referent`, шаги с `ReferenceKind`, текст «softly reachable only». `ALL_REFERENCES` —
+  BFS по входящим ссылкам с лимитами (`inspector.oql.path-search-limit`).
+* `OpenHeapRegistry` держит дампы с `keepForQueries`; `OqlExecutionService` — `OQLEngine` NetBeans на `SandboxedJavaScript`
+  (Nashorn + `ClassFilter`, `engine`/`context` закрыты; регистрация через `EngineProvider`, проверка при каждом движке).
+* `ClassLoaderGrouping`, `RetentionPathSampler` (пути удержания топ-классов, используются в diff), инспекции
+  `EmptyAndSparseCollectionsInspector` и `BoxedPrimitivesOverheadInspector`, `JfrAllocationStackAggregator`.
+
 ### Релизный контур
 * `mvn clean package -Prelease` (профиль `release` в `backend/pom.xml`): UI всегда собирается (`-DskipUi`
   запрещён enforcer'ом), `spring-boot:build-info` → `META-INF/build-info.properties`, `git-commit-id-maven-plugin`

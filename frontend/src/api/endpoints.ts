@@ -2,19 +2,26 @@ import { http } from './http';
 import type {
   AboutDto,
   ActiveProcessDto,
+  AllocationStacksDto,
+  ClassLoaderStatsDto,
   ClassStatsDto,
   DiskSpaceCheckDto,
   DominatorNodeDto,
+  GcRootPathDto,
   GcTriggerResultDto,
   ImportedReportDto,
   InspectionFindingDto,
   InspectionRuleRunDto,
+  JfrAllocationStatsDto,
   JvmProcessDto,
   LiveMetricsPayloadDto,
   MemoryGroup,
   MemoryGroupStatsDto,
   MetricsPointDto,
+  OqlQueryRequestDto,
+  OqlResultDto,
   PageDto,
+  PathMode,
   ReportExportRequestDto,
   SnapshotDiffDto,
   SnapshotSummaryDto,
@@ -40,14 +47,19 @@ export const api = {
     latestMetrics: (pid: number) => http.get<LiveMetricsPayloadDto | undefined>(`/api/processes/${pid}/metrics`),
     metricsHistory: (pid: number) => http.get<MetricsPointDto[]>(`/api/processes/${pid}/metrics/history`),
     gc: (pid: number) => http.post<GcTriggerResultDto>(`/api/processes/${pid}/gc`, { confirm: true }),
+    startJfr: (pid: number) => http.post<JfrAllocationStatsDto>(`/api/processes/${pid}/jfr`),
+    stopJfr: (pid: number) => http.del<JfrAllocationStatsDto>(`/api/processes/${pid}/jfr`),
+    /** who allocates a class, from the JFR profile */
+    allocationStacks: (pid: number, className: string) =>
+      http.get<AllocationStacksDto>(`/api/processes/${pid}/jfr/allocations?className=${encode(className)}`),
   },
   snapshots: {
     list: () => http.get<SnapshotSummaryDto[]>('/api/snapshots'),
     get: (id: string) => http.get<SnapshotSummaryDto>(`/api/snapshots/${encode(id)}`),
     diskCheck: (pid: number) => http.get<DiskSpaceCheckDto>(`/api/snapshots/disk-check?pid=${pid}`),
     histogram: (pid: number) => http.post<SnapshotSummaryDto>('/api/snapshots/histogram', { pid }),
-    deep: (pid: number, liveObjectsOnly: boolean) =>
-      http.post<SnapshotSummaryDto>('/api/snapshots/deep', { pid, liveObjectsOnly }),
+    deep: (pid: number, liveObjectsOnly: boolean, keepForQueries = false) =>
+      http.post<SnapshotSummaryDto>('/api/snapshots/deep', { pid, liveObjectsOnly, keepForQueries }),
     classes: (id: string, params: { sort?: ClassSort; group?: MemoryGroup; offset?: number; limit?: number }) => {
       const query = new URLSearchParams();
       query.set('sort', params.sort ?? 'RETAINED');
@@ -62,6 +74,14 @@ export const api = {
     delete: (id: string) => http.del<void>(`/api/snapshots/${encode(id)}`),
     dominators: (id: string) => http.get<DominatorNodeDto[]>(`/api/snapshots/${encode(id)}/dominators`),
     groups: (id: string) => http.get<MemoryGroupStatsDto[]>(`/api/snapshots/${encode(id)}/groups`),
+    classLoaders: (id: string) => http.get<ClassLoaderStatsDto[]>(`/api/snapshots/${encode(id)}/classloaders`),
+    /** OQL against a dump kept open (keepForQueries) */
+    oql: (id: string, request: OqlQueryRequestDto) =>
+      http.post<OqlResultDto>(`/api/snapshots/${encode(id)}/oql`, request),
+    /** shortest GC root path of any object of an open dump */
+    path: (id: string, objectId: number, mode: PathMode) =>
+      http.get<GcRootPathDto>(`/api/snapshots/${encode(id)}/paths/${objectId}?mode=${mode}`),
+    closeHeap: (id: string) => http.del<void>(`/api/snapshots/${encode(id)}/heap`),
     inspections: (id: string) => http.get<InspectionRuleRunDto[]>(`/api/snapshots/${encode(id)}/inspections`),
     /** Growing classes first; {@code includeShrinking} also returns the freed ones. */
     diff: (baselineId: string, currentId: string, limit = 5000, includeShrinking = true) =>

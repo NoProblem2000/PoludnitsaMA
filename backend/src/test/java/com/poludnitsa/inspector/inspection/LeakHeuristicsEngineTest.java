@@ -83,7 +83,8 @@ class LeakHeuristicsEngineTest {
         assertThat(LeakHeuristicsEngine.defaultRules()).extracting(LeakInspectionRule::id).containsExactlyInAnyOrder(
                 "wildfly.classloader-leak", "wildfly.threadlocal-pool-leak", "cdi.scope-mismatch",
                 "hibernate.persistence-context-bloat", "undertow.http-session-bloat", "hazelcast.serialized-heapdata",
-                "hazelcast.orphaned-listeners", "jvm.unbounded-collection", "jvm.duplicate-strings");
+                "hazelcast.orphaned-listeners", "jvm.unbounded-collection", "jvm.duplicate-strings",
+                "jvm.empty-sparse-collections", "jvm.boxed-primitives");
     }
 
     private GcRootPathResolver resolver() {

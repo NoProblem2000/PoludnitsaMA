@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Activity, GitCompare, type LucideIcon, Network, ShieldAlert } from 'lucide-react';
+import { Activity, GitCompare, type LucideIcon, Network, ShieldAlert, SquareTerminal } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   countFindings,
@@ -21,6 +21,7 @@ const ITEMS: NavItem[] = [
   { id: 'heuristics', label: 'Leak Heuristics', hint: 'Почему течёт?', icon: ShieldAlert },
   { id: 'dominators', label: 'Dominator Tree & Sunburst', hint: 'Кто держит память', icon: Network },
   { id: 'diff', label: 'Snapshot Comparison', hint: 'Diff двух снапшотов', icon: GitCompare },
+  { id: 'oql', label: 'OQL Console', hint: 'Запросы к открытому дампу', icon: SquareTerminal },
 ];
 
 function Counter({ value, tone }: { value: number; tone: 'critical' | 'warning' }) {

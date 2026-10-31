@@ -13,7 +13,9 @@ import com.poludnitsa.inspector.inspection.rules.jakarta.HibernatePersistenceCon
 import com.poludnitsa.inspector.inspection.rules.jakarta.ThreadLocalLeakInspector;
 import com.poludnitsa.inspector.inspection.rules.jakarta.UndertowHttpSessionBloatInspector;
 import com.poludnitsa.inspector.inspection.rules.jakarta.WildFlyClassLoaderLeakInspector;
+import com.poludnitsa.inspector.inspection.rules.jvm.BoxedPrimitivesOverheadInspector;
 import com.poludnitsa.inspector.inspection.rules.jvm.DuplicateStringsAndByteArraysInspector;
+import com.poludnitsa.inspector.inspection.rules.jvm.EmptyAndSparseCollectionsInspector;
 import com.poludnitsa.inspector.inspection.rules.jvm.UnboundedCollectionAndCacheInspector;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -60,7 +62,9 @@ public class LeakHeuristicsEngine {
                 new HazelcastSerializedHeapDataInspector(),
                 new OrphanedHazelcastListenerInspector(),
                 new UnboundedCollectionAndCacheInspector(),
-                new DuplicateStringsAndByteArraysInspector());
+                new DuplicateStringsAndByteArraysInspector(),
+                new EmptyAndSparseCollectionsInspector(),
+                new BoxedPrimitivesOverheadInspector());
     }
 
     public static LeakHeuristicsEngine withDefaultRules(InspectorProperties properties) {

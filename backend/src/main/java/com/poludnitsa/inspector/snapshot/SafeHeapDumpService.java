@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
+import org.netbeans.lib.profiler.heap.Heap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -42,7 +43,8 @@ import org.springframework.stereotype.Service;
  *       {@code MBeanServerConnection}, into the snapshot's private directory.</li>
  *   <li>{@link ObjectGraphAnalyzer} builds the analytical snapshot.</li>
  *   <li>In {@code finally} the whole directory (dump + NetBeans indexes) is deleted; {@link DumpFileCleaner} covers
- *       shutdown and crashes.</li>
+ *       shutdown and crashes. With {@code keepForQueries} the analysed heap and its directory are handed to
+ *       {@link OpenHeapRegistry} instead, which deletes them when the dump is closed or idle.</li>
  * </ol>
  * One deep snapshot runs at a time: each one pauses the target and may need gigabytes of disk.
  */
@@ -57,18 +59,20 @@ public class SafeHeapDumpService implements DisposableBean {
     private final ObjectGraphAnalyzer analyzer;
     private final SnapshotStore store;
     private final DumpFileCleaner cleaner;
+    private final OpenHeapRegistry openHeaps;
     private final InspectorProperties.Snapshots props;
     private final Semaphore oneAtATime = new Semaphore(1);
     private final ExecutorService executor = Executors.newSingleThreadExecutor(new DaemonThreadFactory("heap-dump"));
 
     public SafeHeapDumpService(JmxConnectionManager connections, JvmDiscoveryService discovery,
                                ObjectGraphAnalyzer analyzer, SnapshotStore store, DumpFileCleaner cleaner,
-                               InspectorProperties properties) {
+                               OpenHeapRegistry openHeaps, InspectorProperties properties) {
         this.connections = connections;
         this.discovery = discovery;
         this.analyzer = analyzer;
         this.store = store;
         this.cleaner = cleaner;
+        this.openHeaps = openHeaps;
         this.props = properties.snapshots();
     }
 
@@ -93,6 +97,15 @@ public class SafeHeapDumpService implements DisposableBean {
      * Poll the returned snapshot for progress.
      */
     public SnapshotSummaryDto startDeepSnapshot(long pid, boolean liveObjectsOnly) {
+        return startDeepSnapshot(pid, liveObjectsOnly, false);
+    }
+
+    /** @param keepForQueries keep the analysed dump open for OQL ({@link OpenHeapRegistry}) */
+    public SnapshotSummaryDto startDeepSnapshot(long pid, boolean liveObjectsOnly, boolean keepForQueries) {
+        if (keepForQueries && !openHeaps.enabled()) {
+            throw new OperationRejectedException(403, "OQL_DISABLED",
+                    "Keeping heap dumps open is disabled (inspector.oql.enabled=false)");
+        }
         if (!oneAtATime.tryAcquire()) {
             throw new OperationRejectedException(409, "SNAPSHOT_IN_PROGRESS",
                     "Another heap dump is being taken or analysed; one deep snapshot runs at a time");
@@ -107,7 +120,7 @@ public class SafeHeapDumpService implements DisposableBean {
             SnapshotRecord record = store.create(SnapshotKind.DEEP, pid,
                     process == null ? "PID " + pid : process.displayName(),
                     process == null ? ProcessType.STANDARD_JVM : process.processType(), liveObjectsOnly);
-            executor.execute(() -> run(record, liveObjectsOnly));
+            executor.execute(() -> run(record, liveObjectsOnly, keepForQueries));
             handedOver = true;
             return record.toSummary();
         } catch (RejectedExecutionException e) {
@@ -123,10 +136,11 @@ public class SafeHeapDumpService implements DisposableBean {
      * The final status (READY / FAILED) is published last, after the files are deleted and the permit is free:
      * once a client sees a finished snapshot, the disk is clean and the next dump can start.
      */
-    private void run(SnapshotRecord record, boolean liveObjectsOnly) {
+    private void run(SnapshotRecord record, boolean liveObjectsOnly, boolean keepForQueries) {
         long pid = record.pid();
         Path workDir = null;
         SnapshotData data = null;
+        Heap[] keptHeap = {null};
         String failure = null;
         try {
             workDir = cleaner.createWorkDir(record.id());
@@ -152,8 +166,10 @@ public class SafeHeapDumpService implements DisposableBean {
             log.info("Heap dump of PID {} written in {} ms: {} bytes (live={})", pid, dumpMs, Files.size(hprof),
                     liveObjectsOnly);
 
-            data = analyzer.analyze(hprof, record);
-            record.phase(SnapshotStatus.ANALYZING, "Deleting raw heap dump and indexes");
+            data = analyze(hprof, record, keepForQueries ? keptHeap : null);
+            if (!keepForQueries) {
+                record.phase(SnapshotStatus.ANALYZING, "Deleting raw heap dump and indexes");
+            }
         } catch (InspectorException e) {
             failure = logFailure(record, e.getMessage(), e);
         } catch (IOException | UncheckedIOException e) {
@@ -165,7 +181,11 @@ public class SafeHeapDumpService implements DisposableBean {
                     + " larger -Xmx", e);
         } finally {
             try {
-                if (workDir != null) {
+                if (keptHeap[0] != null && failure == null) {
+                    openHeaps.open(record, keptHeap[0], workDir);
+                    keptHeap[0] = null;
+                } else if (workDir != null) {
+                    keptHeap[0] = null;
                     record.rawDumpDeleted(cleaner.deleteNow(workDir));
                 }
             } finally {
@@ -177,6 +197,20 @@ public class SafeHeapDumpService implements DisposableBean {
                 }
             }
         }
+    }
+
+    /**
+     * Analyses in a frame of its own: once it returns, nothing on the dump thread references the heap any more
+     * (an interpreted frame keeps dead locals alive), so its mapped files can be unmapped and deleted on Windows.
+     *
+     * @param keep receives the open heap when it is to be kept for queries; {@code null} to drop it
+     */
+    private SnapshotData analyze(Path hprof, SnapshotRecord record, Heap[] keep) throws IOException {
+        ObjectGraphAnalyzer.Analysis analysis = analyzer.analyze(hprof, record);
+        if (keep != null) {
+            keep[0] = analysis.heap();
+        }
+        return analysis.data();
     }
 
     private void dumpHeap(long pid, Path hprof, boolean liveObjectsOnly) {

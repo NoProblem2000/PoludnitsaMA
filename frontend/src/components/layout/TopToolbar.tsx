@@ -184,6 +184,8 @@ export function TopToolbar() {
   const activePid = useInspectorStore((s) => s.activePid);
   const busy = useInspectorStore((s) => s.busy);
   const dumpMode = useInspectorStore((s) => s.dumpMode);
+  const keepForQueries = useInspectorStore((s) => s.keepForQueries);
+  const setKeepForQueries = useInspectorStore((s) => s.setKeepForQueries);
   const report = useInspectorStore((s) => s.offlineReport);
   const quickHistogram = useInspectorStore((s) => s.quickHistogram);
   const checkDiskSpace = useInspectorStore((s) => s.checkDiskSpace);
@@ -294,7 +296,26 @@ export function TopToolbar() {
             <code className="text-kraken-text">{disk.directory}</code>.
           </p>
         )}
-        <p>После анализа сырой .hprof и индексы NetBeans удаляются с диска автоматически.</p>
+        <label className="flex items-start gap-2 rounded-md border border-kraken-border bg-kraken-card px-3 py-2">
+          <input
+            type="checkbox"
+            checked={keepForQueries}
+            onChange={(event) => setKeepForQueries(event.target.checked)}
+            className="mt-1 accent-[#00e5ff]"
+          />
+          <span>
+            <span className="block text-kraken-text">Оставить дамп открытым для OQL</span>
+            <span className="block text-2xs">
+              Запросы OQL и пути до GC Root с учётом weak/soft-ссылок по любому объекту. Дамп и индексы занимают диск,
+              пока дамп не закрыт или не простаивает 30 минут.
+            </span>
+          </span>
+        </label>
+        <p>
+          {keepForQueries
+            ? 'После анализа дамп останется на диске до закрытия (вкладка OQL Console) или 30 минут простоя.'
+            : 'После анализа сырой .hprof и индексы NetBeans удаляются с диска автоматически.'}
+        </p>
       </ConfirmDialog>
 
       <ConfirmDialog

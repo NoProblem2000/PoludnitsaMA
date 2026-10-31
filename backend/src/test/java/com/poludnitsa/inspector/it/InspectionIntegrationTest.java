@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.HazelcastInstance;
+import com.poludnitsa.inspector.api.dto.ClassLoaderKind;
+import com.poludnitsa.inspector.api.dto.ClassStatsDto;
 import com.poludnitsa.inspector.api.dto.InspectionFindingDto;
 import com.poludnitsa.inspector.api.dto.InspectionRuleRunDto;
 import com.poludnitsa.inspector.api.dto.Severity;
@@ -17,6 +19,7 @@ import com.poludnitsa.inspector.it.scenario.ScenarioTarget;
 import com.poludnitsa.inspector.jmx.JmxConnectionManager;
 import com.poludnitsa.inspector.snapshot.DumpFileCleaner;
 import com.poludnitsa.inspector.snapshot.ObjectGraphAnalyzer;
+import com.poludnitsa.inspector.snapshot.OpenHeapRegistry;
 import com.poludnitsa.inspector.snapshot.SafeHeapDumpService;
 import com.poludnitsa.inspector.snapshot.SnapshotData;
 import com.poludnitsa.inspector.snapshot.SnapshotStore;
@@ -32,7 +35,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 
-/** All nine inspections against real heap dumps of child JVMs that reproduce the leak patterns. */
+/** All eleven inspections against real heap dumps of child JVMs that reproduce the leak patterns. */
 class InspectionIntegrationTest {
 
     private static final String SCENARIO = ScenarioTarget.class.getName();
@@ -57,7 +60,7 @@ class InspectionIntegrationTest {
         store = new SnapshotStore(properties, new ObjectMapper().findAndRegisterModules());
         dumps = new SafeHeapDumpService(connections, discovery,
                 new ObjectGraphAnalyzer(properties, LeakHeuristicsEngine.withDefaultRules(properties)), store, cleaner,
-                properties);
+                new OpenHeapRegistry(cleaner, properties), properties);
     }
 
     @AfterAll
@@ -129,6 +132,50 @@ class InspectionIntegrationTest {
                 && line.contains("AuditEntry.status"));
         assertThat(strings.wastedMemoryBytes()).isGreaterThan(1L << 20);
 
+        // Eager empty collections, grouped by the owning field: ArrayList(50) and a cleared HashMap(64) per customer.
+        InspectionFindingDto emptyTags = finding(data, "jvm.empty-sparse-collections", f -> "tags".equals(f.fieldName()));
+        assertThat(emptyTags.suspectClassName()).isEqualTo(SCENARIO + "$Customer");
+        assertThat(emptyTags.affectedInstances()).isEqualTo(80_000);
+        assertThat(emptyTags.wastedMemoryBytes()).isGreaterThanOrEqualTo(80_000L * 200);
+        assertThat(emptyTags.title()).contains("ArrayList");
+        InspectionFindingDto emptyAttributes = finding(data, "jvm.empty-sparse-collections",
+                f -> "attributes".equals(f.fieldName()));
+        assertThat(emptyAttributes.title()).contains("HashMap");
+        assertThat(emptyAttributes.affectedInstances()).isEqualTo(80_000);
+        // %,d groups digits with a no-break space in the Russian locale
+        assertThat(emptyAttributes.evidence()).anyMatch(line -> line.replaceAll("[\\s\\u00a0\\u202f]", "")
+                .contains("пустых80000"));
+
+        // Boxed Longs: a field of 80 000 customers and a List<Long> of 100 000 ids.
+        InspectionFindingDto boxedField = finding(data, "jvm.boxed-primitives",
+                f -> "loyaltyPoints".equals(f.fieldName()));
+        assertThat(boxedField.suspectClassName()).isEqualTo(SCENARIO + "$Customer");
+        assertThat(boxedField.title()).contains("Long");
+        InspectionFindingDto boxedList = finding(data, "jvm.boxed-primitives", f -> "RECENT_IDS".equals(f.fieldName()));
+        assertThat(boxedList.affectedInstances()).isEqualTo(100_000);
+        assertThat(boxedList.wastedMemoryBytes()).isGreaterThanOrEqualTo(100_000L * 16);
+
+        // Memory per class loader, with the WildFly module name.
+        assertThat(data.classLoaders()).anySatisfy(loader -> {
+            assertThat(loader.kind()).isEqualTo(ClassLoaderKind.JBOSS_MODULE);
+            assertThat(loader.moduleName()).isEqualTo("deployment.orders.war");
+            assertThat(loader.retainedBytes()).isNotNull();
+        });
+        assertThat(data.classLoaders()).anySatisfy(loader -> assertThat(loader.kind())
+                .isEqualTo(ClassLoaderKind.APPLICATION));
+        assertThat(data.classLoaders()).anySatisfy(loader -> assertThat(loader.kind())
+                .isEqualTo(ClassLoaderKind.BOOTSTRAP));
+
+        // Retention paths of a top class: all sampled customers hang on the registry list.
+        ClassStatsDto customers = data.classes().stream()
+                .filter(c -> c.className().equals(SCENARIO + "$Customer")).findFirst().orElseThrow();
+        assertThat(customers.retentionPaths()).isNotEmpty();
+        // the real chain: the class path loader lists the registry class, whose static list holds the customers
+        assertThat(customers.retentionPaths().get(0).signature())
+                .startsWith("ClassLoaders$AppClassLoader.classes")
+                .contains("static ALL in ScenarioTarget$CustomerRegistry");
+        assertThat(customers.retentionPaths().get(0).share()).isGreaterThan(0.9);
+
         assertThat(data.findings()).allSatisfy(f -> {
             assertThat(f.whyItHappens()).isNotBlank();
             assertThat(f.howToFixCodeSnippet()).isNotBlank();
@@ -179,7 +226,7 @@ class InspectionIntegrationTest {
     }
 
     private static void assertNoRuleFailed(SnapshotData data) {
-        assertThat(data.inspections()).hasSize(9);
+        assertThat(data.inspections()).hasSize(11);
         assertThat(data.inspections()).extracting(InspectionRuleRunDto::error).containsOnlyNulls();
     }
 

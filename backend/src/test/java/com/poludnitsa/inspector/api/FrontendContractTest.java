@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.poludnitsa.inspector.api.rest.AboutController;
+import com.poludnitsa.inspector.api.rest.HeapQueryController;
 import com.poludnitsa.inspector.api.rest.InspectionController;
 import com.poludnitsa.inspector.api.rest.ProcessControlController;
 import com.poludnitsa.inspector.api.rest.ReportController;
@@ -61,7 +62,7 @@ class FrontendContractTest {
     /** Client-side unions without a Java enum (the WebSocket client frame is a record with a String action). */
     private static final Set<String> TS_ONLY = Set.of("LiveStreamClientMessage");
     private static final List<Class<?>> CONTROLLERS = List.of(ProcessControlController.class, SnapshotController.class,
-            ReportController.class, InspectionController.class, AboutController.class);
+            ReportController.class, InspectionController.class, AboutController.class, HeapQueryController.class);
 
     private static final Pattern INTERFACE = Pattern.compile("(?ms)^export interface (\\w+)(?:<\\w+>)? \\{\\n(.*?)^}");
     private static final Pattern FIELD = Pattern.compile("(?m)^  (\\w+)(\\??): (.+);$");

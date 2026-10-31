@@ -9,12 +9,19 @@ package com.poludnitsa.inspector.api.dto;
  * @param gcRoot        {@code true} only for the first step, when it is a GC root
  * @param gcRootKind    NetBeans {@code GCRoot#getKind()} ("sticky class", "thread object", "Java frame", ...), for
  *                      Java frames with the frame location; {@code null} when {@code gcRoot == false}
+ * @param referenceKind kind of the reference to the next step ({@code null} for the last step and in summaries
+ *                      written before this field existed, where every hop was strong)
  */
 public record GcRootPathStepDto(
         long objectId,
         String className,
         String referenceName,
         boolean gcRoot,
-        String gcRootKind
+        String gcRootKind,
+        ReferenceKind referenceKind
 ) {
+    /** A step whose reference to the next one is strong (or the last step). */
+    public GcRootPathStepDto(long objectId, String className, String referenceName, boolean gcRoot, String gcRootKind) {
+        this(objectId, className, referenceName, gcRoot, gcRootKind, referenceName == null ? null : ReferenceKind.STRONG);
+    }
 }

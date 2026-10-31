@@ -12,9 +12,15 @@ import jakarta.validation.constraints.Positive;
  *                        unreachable objects are included. {@code true}: a Full GC runs first, the dump holds only
  *                        reachable objects (smaller, exact for diffs) but the pause is longer and may drop Hazelcast
  *                        client connections on heartbeat timeout.
+ * @param keepForQueries  keep the dump and its indexes open after the analysis for OQL queries and on-demand GC root
+ *                        paths, until closed or idle; its disk space stays in use meanwhile. {@code null}: {@code false}
  */
 public record HeapDumpRequestDto(
         @Positive long pid,
-        boolean liveObjectsOnly
+        boolean liveObjectsOnly,
+        Boolean keepForQueries
 ) {
+    public boolean keepHeapOpen() {
+        return Boolean.TRUE.equals(keepForQueries);
+    }
 }

@@ -5,6 +5,7 @@ import com.poludnitsa.inspector.api.dto.ClassHistogramDto;
 import com.poludnitsa.inspector.api.dto.ClassHistogramEntryDto;
 import com.poludnitsa.inspector.api.dto.ConnectionState;
 import com.poludnitsa.inspector.api.dto.GcTriggerResultDto;
+import com.poludnitsa.inspector.api.dto.AllocationStacksDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
 import com.poludnitsa.inspector.api.dto.MetricsPointDto;
@@ -198,6 +199,17 @@ public class LiveMemoryCollectorService implements DisposableBean {
         LiveTargetMonitor monitor = monitors.get(pid);
         JfrAllocationSampler jfrSampler = monitor == null ? null : monitor.jfr();
         return jfrSampler == null ? Optional.empty() : Optional.of(jfrSampler.snapshot());
+    }
+
+    /** Allocation hotspots and stacks of one class from the JFR profile of the target. */
+    public AllocationStacksDto allocationStacks(long pid, String className) {
+        LiveTargetMonitor monitor = monitors.get(pid);
+        JfrAllocationSampler jfrSampler = monitor == null ? null : monitor.jfr();
+        if (jfrSampler == null) {
+            throw new OperationRejectedException(404, "JFR_NOT_RUNNING", "No JFR allocation profile runs on PID " + pid
+                    + "; start it to see who allocates " + className);
+        }
+        return jfrSampler.stacks(className);
     }
 
     /** Stops monitoring, e.g. before a remote target is unregistered; subscribers get the final status. */

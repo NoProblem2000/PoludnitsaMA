@@ -28,6 +28,7 @@ import { palette } from '@/theme/palette';
 import { GROUP_COLOR, GROUP_LABEL } from '@/utils/categories';
 import { classifyRoot, formatObjectId, ROOT_TYPE_COLOR, ROOT_TYPE_LABEL } from '@/utils/gcRoots';
 import { formatBytes, formatNumber, formatPercent, splitClassName } from '@/utils/format';
+import { type Grouping, HeapGroupingPanel } from './HeapGroupingPanel';
 import {
   buildDominatorTree,
   type DomNode,
@@ -42,6 +43,13 @@ import {
 } from './dominatorTree';
 
 type SortKey = 'name' | 'shallow' | 'retained';
+
+const GROUPINGS = [
+  ['dominators', 'Dominator Tree'],
+  ['package', 'By Package'],
+  ['classloader', 'By ClassLoader'],
+  ['module', 'By JBoss Module'],
+] as const;
 
 interface Row {
   node: DomNode;
@@ -159,7 +167,12 @@ function ClassCell({ row, expanded, onToggle }: { row: Row; expanded: boolean; o
   );
 }
 
-function PathModal({ node, heapBytes, onClose }: { node: DominatorNodeDto | null; heapBytes: number; onClose(): void }) {
+function PathModal({ node, heapBytes, onClose, openSnapshotId }: {
+  node: DominatorNodeDto | null;
+  heapBytes: number;
+  onClose(): void;
+  openSnapshotId: string | null;
+}) {
   const rootType = node ? classifyRoot(node.gcRootPath) : 'NONE';
   return (
     <Modal
@@ -190,7 +203,12 @@ function PathModal({ node, heapBytes, onClose }: { node: DominatorNodeDto | null
               <div className="pt-1"><Badge color={ROOT_TYPE_COLOR[rootType]}>{ROOT_TYPE_LABEL[rootType]}</Badge></div>
             </div>
           </div>
-          <GcRootPathGraph path={node.gcRootPath} fallbackText={node.gcRootPathText} targetLabel="Доминатор" />
+          <GcRootPathGraph
+            path={node.gcRootPath}
+            fallbackText={node.gcRootPathText}
+            targetLabel="Доминатор"
+            live={openSnapshotId ? { snapshotId: openSnapshotId, objectId: node.objectId } : undefined}
+          />
         </div>
       )}
     </Modal>
@@ -211,6 +229,7 @@ export function DominatorTreeView() {
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [pathNode, setPathNode] = useState<DominatorNodeDto | null>(null);
+  const [grouping, setGrouping] = useState<'dominators' | Grouping>('dominators');
   const scroller = useRef<HTMLDivElement>(null);
 
   const heapBytes = chosen?.totalHeapBytes ?? 0;
@@ -359,8 +378,24 @@ export function DominatorTreeView() {
             </aside>
           </div>
 
+          <div className="flex items-center gap-1 border-b border-kraken-border px-4 pt-2">
+            {GROUPINGS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setGrouping(value)}
+                className={clsx('-mb-px border-b-2 px-3 py-1.5 text-xs transition-colors', grouping === value
+                  ? 'border-accent-cyan text-accent-cyan' : 'border-transparent text-kraken-muted hover:text-kraken-text')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {grouping !== 'dominators' ? (
+            <HeapGroupingPanel grouping={grouping} snapshot={chosen} classLoaders={data?.classLoaders ?? []} />
+          ) : (
+          <>
           <div className="flex items-center gap-2 border-b border-kraken-border px-4 py-2">
-            <span className="text-xs font-semibold">Доминаторы</span>
             {filter && (
               <span className="flex items-center gap-1 rounded-full border border-accent-cyan/60 bg-accent-cyan/10 px-2 py-0.5 text-2xs text-accent-cyan">
                 {filterLabel(filter, (id) => byId.get(id))}
@@ -489,9 +524,12 @@ export function DominatorTreeView() {
             Показано {formatNumber(rows.length)} строк · вложенность по путям до GC Root: доминатор объекта всегда лежит на
             каждом пути к нему
           </div>
+          </>
+          )}
         </>
       )}
-      <PathModal node={pathNode} heapBytes={heapBytes} onClose={() => setPathNode(null)} />
+      <PathModal node={pathNode} heapBytes={heapBytes} onClose={() => setPathNode(null)}
+        openSnapshotId={chosen?.heapOpen ? chosen.snapshotId : null} />
     </div>
   );
 }

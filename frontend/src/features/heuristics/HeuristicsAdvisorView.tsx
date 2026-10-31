@@ -259,7 +259,13 @@ function CulpritPanel({ finding, heapBytes }: { finding: InspectionFindingDto; h
   );
 }
 
-function FindingDetail({ finding, heapBytes }: { finding: InspectionFindingDto; heapBytes: number }) {
+function FindingDetail({ finding, heapBytes, openSnapshotId }: {
+  finding: InspectionFindingDto;
+  heapBytes: number;
+  /** set when the dump is open: the path can be searched again, with weak / soft references */
+  openSnapshotId: string | null;
+}) {
+  const target = finding.gcRootPath[finding.gcRootPath.length - 1];
   const rootType = classifyRoot(finding.gcRootPath);
   const SeverityIcon = SEVERITY_ICON[finding.severity];
   return (
@@ -289,7 +295,11 @@ function FindingDetail({ finding, heapBytes }: { finding: InspectionFindingDto; 
           </span>
         }
       >
-        <GcRootPathGraph path={finding.gcRootPath} fallbackText={finding.gcRootPathText} />
+        <GcRootPathGraph
+          path={finding.gcRootPath}
+          fallbackText={finding.gcRootPathText}
+          live={openSnapshotId && target ? { snapshotId: openSnapshotId, objectId: target.objectId } : undefined}
+        />
       </Section>
 
       <Section icon={<Lightbulb size={15} />} title="Почему это вызывает утечку в вашей архитектуре" accent={palette.amber}>
@@ -348,7 +358,7 @@ export function HeuristicsAdvisorView() {
   if (choices.length === 0 || !chosen) {
     return (
       <EmptyState icon={<ShieldAlert size={22} />} title="Leak Heuristics Advisor — «Почему течёт?»">
-        Диагнозы появятся после Deep Heap Dump: 9 инспекций WildFly / Jakarta EE, Hazelcast Client и JVM-коллекций
+        Диагнозы появятся после Deep Heap Dump: 11 инспекций WildFly / Jakarta EE, Hazelcast Client и JVM
         запускаются во время анализа дампа.
       </EmptyState>
     );
@@ -409,7 +419,8 @@ export function HeuristicsAdvisorView() {
           <div className="min-w-0 flex-1 overflow-y-auto p-5">
             {selected ? (
               <div className="mx-auto max-w-4xl">
-                <FindingDetail key={selected.id} finding={selected} heapBytes={heapBytes} />
+                <FindingDetail key={selected.id} finding={selected} heapBytes={heapBytes}
+                  openSnapshotId={chosen.heapOpen ? chosen.snapshotId : null} />
               </div>
             ) : (
               <EmptyState icon={<ShieldAlert size={22} />} title="Нет диагнозов в этой категории" />

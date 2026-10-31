@@ -5,6 +5,7 @@ import com.poludnitsa.inspector.api.dto.ClassHistogramDto;
 import com.poludnitsa.inspector.api.dto.ConnectionState;
 import com.poludnitsa.inspector.api.dto.GcTriggerRequestDto;
 import com.poludnitsa.inspector.api.dto.GcTriggerResultDto;
+import com.poludnitsa.inspector.api.dto.AllocationStacksDto;
 import com.poludnitsa.inspector.api.dto.JfrAllocationStatsDto;
 import com.poludnitsa.inspector.api.dto.JvmProcessDto;
 import com.poludnitsa.inspector.api.dto.LiveMetricsPayloadDto;
@@ -17,6 +18,8 @@ import com.poludnitsa.inspector.live.LiveMemoryCollectorService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -135,5 +138,12 @@ public class ProcessControlController {
     @DeleteMapping("/{pid}/jfr")
     public JfrAllocationStatsDto stopJfr(@PathVariable long pid) {
         return collector.stopJfr(pid);
+    }
+
+    /** Who allocates a class: allocation hotspots (first application frame) and stacks from the JFR profile. */
+    @GetMapping("/{pid}/jfr/allocations")
+    public AllocationStacksDto allocationStacks(@PathVariable long pid,
+                                                @RequestParam @NotBlank @Size(max = 1024) String className) {
+        return collector.allocationStacks(pid, className);
     }
 }

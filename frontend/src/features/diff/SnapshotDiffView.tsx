@@ -9,6 +9,7 @@ import { Badge } from '@/components/common/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ScoreBar } from '@/components/common/ScoreBar';
 import { SnapshotSelect, useSnapshotNumber } from '@/components/common/SnapshotSelect';
+import { RetentionPanel } from './RetentionPanel';
 import { useComparePair, useInspectorStore } from '@/store/useInspectorStore';
 import { palette } from '@/theme/palette';
 import { GROUP_COLOR, GROUP_LABEL } from '@/utils/categories';
@@ -151,6 +152,7 @@ export function SnapshotDiffView() {
   const deferredQuery = useDeferredValue(query);
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'deltaRetained', desc: true });
   const scroller = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   const classes = useMemo(() => diff?.classes ?? [], [diff]);
   const counts = useMemo(() => {
@@ -169,6 +171,8 @@ export function SnapshotDiffView() {
         && (needle === '' || row.className.toLowerCase().includes(needle)))
       .sort((a, b) => direction * compare(sort.key, a, b) || a.className.localeCompare(b.className));
   }, [classes, change, group, deferredQuery, sort]);
+
+  const selectedRow = selected ? classes.find((row) => row.className === selected) ?? null : null;
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -342,8 +346,9 @@ export function SnapshotDiffView() {
                 <div
                   key={row.className}
                   role="row"
-                  className={clsx(GRID, 'absolute left-0 top-0 w-full border-b border-kraken-border/50 px-4 hover:bg-kraken-card',
-                    item.index % 2 === 1 && 'bg-kraken-panel/40')}
+                  onClick={() => setSelected(row.className === selected ? null : row.className)}
+                  className={clsx(GRID, 'absolute left-0 top-0 w-full cursor-pointer border-b border-kraken-border/50 px-4 hover:bg-kraken-card',
+                    row.className === selected ? 'bg-accent-cyan/10' : item.index % 2 === 1 && 'bg-kraken-panel/40')}
                   style={{ height: ROW_HEIGHT, transform: `translateY(${item.start}px)` }}
                 >
                   <span className="flex min-w-0 items-center gap-2" title={row.className}>
@@ -372,6 +377,7 @@ export function SnapshotDiffView() {
           </div>
         )}
       </div>
+      {selectedRow && <RetentionPanel row={selectedRow} onClose={() => setSelected(null)} />}
       <div className="flex gap-4 border-t border-kraken-border px-4 py-1.5 text-2xs text-kraken-subtle">
         <span>Показано {formatNumber(rows.length)} из {formatNumber(classes.length)} изменившихся классов</span>
         <span>

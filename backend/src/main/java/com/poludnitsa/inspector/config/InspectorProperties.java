@@ -16,6 +16,7 @@ public record InspectorProperties(
         @DefaultValue Jfr jfr,
         @DefaultValue Snapshots snapshots,
         @DefaultValue Inspections inspections,
+        @DefaultValue Oql oql,
         @DefaultValue Web web
 ) {
 
@@ -86,6 +87,13 @@ public record InspectorProperties(
      * @param maxAge                   {@code maxAge} of the recording on the target, bounds its disk repository
      * @param maxSize                  {@code maxSize} of the recording on the target
      * @param topClasses               allocating classes reported
+     * @param tlabEvents               also record {@code jdk.ObjectAllocationInNewTLAB} and
+     *                                 {@code jdk.ObjectAllocationOutsideTLAB} with stack traces: complete allocation
+     *                                 call trees, but one event per TLAB refill (measurable overhead on busy servers);
+     *                                 {@code jdk.ObjectAllocationSample} (throttled) always has stack traces
+     * @param stackDepth               frames kept per allocation stack, from the allocating frame down
+     * @param stackPolls               polls aggregated for allocation stacks (window = stackPolls x pollInterval)
+     * @param maxStacksPerClass        distinct stacks kept per class and poll
      * @param workDir                  local directory for transferred JFR chunks, defaults to
      *                                 {@code ${java.io.tmpdir}/jvm-leak-inspector/jfr}
      */
@@ -95,6 +103,10 @@ public record InspectorProperties(
             @DefaultValue("3m") Duration maxAge,
             @DefaultValue("64MB") DataSize maxSize,
             @DefaultValue("15") int topClasses,
+            @DefaultValue("false") boolean tlabEvents,
+            @DefaultValue("12") int stackDepth,
+            @DefaultValue("18") int stackPolls,
+            @DefaultValue("200") int maxStacksPerClass,
             Path workDir
     ) {
         public Path resolvedWorkDir() {
@@ -114,6 +126,9 @@ public record InspectorProperties(
      * @param maxInstancesScannedPerClass instances checked per class when looking for that representative
      * @param maxPathDepth               hops followed towards a GC root before the path is reported as truncated
      * @param maxSnapshots               snapshots kept in the session; the oldest finished ones are dropped
+     * @param retentionSamplesPerClass   instances per top class whose GC root paths are grouped into retention paths
+     * @param retentionPathBudget        total time spent on retention paths per snapshot
+     * @param maxClassLoaders            class loaders reported (largest first)
      */
     public record Snapshots(
             Path workDir,
@@ -123,7 +138,10 @@ public record InspectorProperties(
             @DefaultValue("50") int classesWithSamplePath,
             @DefaultValue("100000") int maxInstancesScannedPerClass,
             @DefaultValue("64") int maxPathDepth,
-            @DefaultValue("20") int maxSnapshots
+            @DefaultValue("20") int maxSnapshots,
+            @DefaultValue("24") int retentionSamplesPerClass,
+            @DefaultValue("30s") Duration retentionPathBudget,
+            @DefaultValue("500") int maxClassLoaders
     ) {
         public static final double MIN_DISK_SPACE_FACTOR = 2.5;
 
@@ -182,6 +200,31 @@ public record InspectorProperties(
             @DefaultValue("10000") int cdiCollectionElementsWarning,
             @DefaultValue("50") int duplicateStringMinCopies,
             @DefaultValue("2000000") int maxStringsScanned
+    ) {
+    }
+
+    /**
+     * Open heap dumps and OQL. A dump taken with {@code keepForQueries} stays on disk with its indexes until closed,
+     * idle for {@code idleTimeout} or evicted by a newer one.
+     *
+     * @param enabled          allow keeping dumps open and running OQL at all
+     * @param maxOpenHeaps     open dumps at the same time; opening one more closes the least recently used
+     * @param idleTimeout      an open dump not queried for this long is closed and deleted
+     * @param defaultRowLimit  rows returned when a query sets no limit
+     * @param maxRowLimit      upper bound of the limit a query may ask for
+     * @param queryTimeout     a running query is cancelled after this unless the request asks for less
+     * @param maxQueryLength   longer queries are rejected
+     * @param pathSearchLimit  objects an on-demand GC root path search may visit
+     */
+    public record Oql(
+            @DefaultValue("true") boolean enabled,
+            @DefaultValue("1") int maxOpenHeaps,
+            @DefaultValue("30m") Duration idleTimeout,
+            @DefaultValue("200") int defaultRowLimit,
+            @DefaultValue("5000") int maxRowLimit,
+            @DefaultValue("60s") Duration queryTimeout,
+            @DefaultValue("10000") int maxQueryLength,
+            @DefaultValue("1000000") int pathSearchLimit
     ) {
     }
 

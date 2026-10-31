@@ -61,6 +61,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <netbeans.version>RELEASE210</netbeans.version>
+        <nashorn.version>15.4</nashorn.version>
         <hazelcast.version>5.3.6</hazelcast.version>
 
         <!-- React UI build (see frontend-maven-plugin); -DskipUi for backend-only builds -->
@@ -110,6 +111,18 @@
             <groupId>org.netbeans.modules</groupId>
             <artifactId>org-netbeans-lib-profiler</artifactId>
             <version>${netbeans.version}</version>
+        </dependency>
+        <!-- OQL engine of VisualVM / NetBeans (queries run as JavaScript over the open heap, see oql.SandboxedJavaScript) -->
+        <dependency>
+            <groupId>org.netbeans.modules</groupId>
+            <artifactId>org-netbeans-modules-profiler-oql</artifactId>
+            <version>${netbeans.version}</version>
+        </dependency>
+        <!-- JavaScript engine for OQL: Nashorn left the JDK in 15. GPL-2.0 with Classpath Exception, see NOTICE -->
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+            <version>${nashorn.version}</version>
         </dependency>
 
         <!-- @ConfigurationProperties metadata for IDE completion -->

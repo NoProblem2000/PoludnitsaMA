@@ -21,6 +21,9 @@ interface Component {
 const COMPONENTS: Component[] = [
   { name: 'Spring Boot 3.5', license: 'Apache-2.0', url: 'https://spring.io/projects/spring-boot', part: 'backend' },
   { name: 'Apache NetBeans Profiler API', license: 'Apache-2.0', url: 'https://netbeans.apache.org/', part: 'backend' },
+  { name: 'Apache NetBeans OQL engine', license: 'Apache-2.0', url: 'https://netbeans.apache.org/', part: 'backend' },
+  { name: 'OpenJDK Nashorn', license: 'GPL-2.0-with-classpath-exception', url: 'https://github.com/openjdk/nashorn', part: 'backend' },
+  { name: 'ASM', license: 'BSD-3-Clause', url: 'https://asm.ow2.io/', part: 'backend' },
   { name: 'Apache Tomcat (embedded)', license: 'Apache-2.0', url: 'https://tomcat.apache.org/', part: 'backend' },
   { name: 'Jackson', license: 'Apache-2.0', url: 'https://github.com/FasterXML/jackson', part: 'backend' },
   { name: 'Hibernate Validator', license: 'Apache-2.0', url: 'https://hibernate.org/validator/', part: 'backend' },
@@ -39,6 +42,7 @@ const LICENSE_COLOR: Record<string, string> = {
   MIT: palette.emerald,
   ISC: palette.emerald,
   'BSD-3-Clause': palette.violet,
+  'GPL-2.0-with-classpath-exception': palette.amber,
 };
 
 /** "Apache 2.0 License" badge used in the status bar and the dialog. */

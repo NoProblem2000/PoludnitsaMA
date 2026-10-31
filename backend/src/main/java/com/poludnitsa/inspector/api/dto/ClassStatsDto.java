@@ -1,13 +1,15 @@
 package com.poludnitsa.inspector.api.dto;
 
+import java.util.List;
+
 /**
- * Per-class statistics of a snapshot, aggregated over all class loaders defining a class with this name.
+ * Per-class statistics of a snapshot.
  *
- * @param retainedBytes   memory retained by all instances of the class as a set
- *                        ({@code JavaClass#getRetainedSizeByClass()}); {@code null} for histograms
- * @param definitionCount class loaders defining this name; above 1 for application classes hints at a class loader
- *                        leak after redeploy
- * @param sample          largest instance with its GC root path, only for the top classes by retained size
+ * @param retainedBytes   sum of retained sizes of the class's instances; {@code null} for histogram snapshots
+ * @param definitionCount how many class loaders define a class of this name ({@code > 1} hints at a redeploy leak)
+ * @param sample          the largest instance with its GC root path; only for the top classes by retained size
+ * @param retentionPaths  how sampled instances are held, most common shape first; only for the top classes of deep
+ *                        snapshots
  */
 public record ClassStatsDto(
         String className,
@@ -17,6 +19,16 @@ public record ClassStatsDto(
         long shallowBytes,
         Long retainedBytes,
         int definitionCount,
-        ClassSampleDto sample
+        ClassSampleDto sample,
+        List<RetentionPathDto> retentionPaths
 ) {
+    public ClassStatsDto {
+        retentionPaths = retentionPaths == null ? List.of() : List.copyOf(retentionPaths);
+    }
+
+    public ClassStatsDto(String className, PackageCategory packageCategory, MemoryGroup memoryGroup, long instances,
+                         long shallowBytes, Long retainedBytes, int definitionCount, ClassSampleDto sample) {
+        this(className, packageCategory, memoryGroup, instances, shallowBytes, retainedBytes, definitionCount, sample,
+                List.of());
+    }
 }

@@ -61,7 +61,7 @@ public class WildFlyClassLoaderLeakInspector implements LeakInspectionRule {
             if (context.outOfBudget()) {
                 break;
             }
-            String name = moduleName(reader, loader);
+            String name = reader.jbossModuleName(loader);
             if (name != null && name.startsWith("deployment.")) {
                 loadersByModule.computeIfAbsent(name, k -> new ArrayList<>()).add(loader);
             }
@@ -141,25 +141,6 @@ public class WildFlyClassLoaderLeakInspector implements LeakInspectionRule {
                     threadsPerLoader.getOrDefault(loader.getInstanceId(), List.of()).size()));
         }
         return finding.why(WHY).fix(FIX).build();
-    }
-
-    static String moduleName(HeapReader reader, Instance loader) {
-        Instance module = HeapReader.objectField(loader, "module");
-        if (module == null) {
-            return null;
-        }
-        String name = reader.string(HeapReader.objectField(module, "name"), 256);
-        if (name != null) {
-            return name;
-        }
-        // jboss-modules 1.x
-        Instance identifier = HeapReader.objectField(module, "identifier");
-        String legacy = reader.string(HeapReader.objectField(identifier, "name"), 256);
-        String slot = reader.string(HeapReader.objectField(identifier, "slot"), 64);
-        if (legacy == null) {
-            return null;
-        }
-        return slot == null || "main".equals(slot) ? legacy : legacy + ":" + slot;
     }
 
     private static boolean isActive(HeapReader reader, Instance loader) {
