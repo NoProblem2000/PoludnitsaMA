@@ -28,15 +28,23 @@ final class TargetJvm implements AutoCloseable {
      * @param extraClasspath classes whose jars or directories go on the child's class path besides test classes
      */
     static TargetJvm start(Class<?> mainClass, int heapMb, Class<?>... extraClasspath) throws Exception {
+        return start(mainClass, heapMb, List.of(), extraClasspath);
+    }
+
+    /** @param jvmArgs extra JVM options, e.g. {@code -Xlog:gc*} */
+    static TargetJvm start(Class<?> mainClass, int heapMb, List<String> jvmArgs, Class<?>... extraClasspath)
+            throws Exception {
         String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         List<String> classpath = new ArrayList<>();
         classpath.add(location(mainClass));
         for (Class<?> type : extraClasspath) {
             classpath.add(location(type));
         }
-        Process process = new ProcessBuilder(java, "-Xmx" + heapMb + "m", "-XX:+UseG1GC",
-                "-Dhazelcast.phone.home.enabled=false", "-Dhazelcast.logging.type=none",
-                "-cp", String.join(File.pathSeparator, classpath), mainClass.getName())
+        List<String> command = new ArrayList<>(List.of(java, "-Xmx" + heapMb + "m", "-XX:+UseG1GC",
+                "-Dhazelcast.phone.home.enabled=false", "-Dhazelcast.logging.type=none"));
+        command.addAll(jvmArgs);
+        command.addAll(List.of("-cp", String.join(File.pathSeparator, classpath), mainClass.getName()));
+        Process process = new ProcessBuilder(command)
                 .redirectErrorStream(true)
                 .start();
         BufferedReader output = new BufferedReader(

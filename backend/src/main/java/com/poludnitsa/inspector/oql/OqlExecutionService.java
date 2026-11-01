@@ -1,6 +1,7 @@
 package com.poludnitsa.inspector.oql;
 
 import com.poludnitsa.inspector.api.dto.GcRootPathDto;
+import com.poludnitsa.inspector.api.dto.OqlHistoryEntryDto;
 import com.poludnitsa.inspector.api.dto.OqlQueryRequestDto;
 import com.poludnitsa.inspector.api.dto.OqlResultDto;
 import com.poludnitsa.inspector.api.dto.OqlValueDto;
@@ -15,8 +16,11 @@ import com.poludnitsa.inspector.heap.GcRootPathResolver;
 import com.poludnitsa.inspector.heap.HeapReader;
 import com.poludnitsa.inspector.snapshot.OpenHeapRegistry;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -66,6 +70,9 @@ public class OqlExecutionService implements DisposableBean {
     private final InspectorProperties.Snapshots snapshots;
     // cached: a runaway script keeps its thread, it must not block the queries of other dumps
     private final ExecutorService executor = Executors.newCachedThreadPool(new DaemonThreadFactory("oql"));
+    private static final int HISTORY_SIZE = 50;
+    private static final int HISTORY_PREVIEW_ROWS = 20;
+    private final Deque<OqlHistoryEntryDto> history = new ArrayDeque<>();
 
     public OqlExecutionService(OpenHeapRegistry registry, InspectorProperties properties) {
         this.registry = registry;
@@ -126,7 +133,10 @@ public class OqlExecutionService implements DisposableBean {
             long started = System.nanoTime();
             try {
                 Rows rows = runWithTimeout(session.engine, timeout, () -> collect(session, query, limit));
-                return toResult(snapshotId, query, rows, session, (System.nanoTime() - started) / 1_000_000);
+                OqlResultDto result = toResult(snapshotId, query, rows, session,
+                        (System.nanoTime() - started) / 1_000_000);
+                remember(result);
+                return result;
             } catch (RunawayQueryException e) {
                 session.runaway = e.finished;
                 log.error("OQL query on snapshot {} did not stop after cancellation: {}", snapshotId, query);
@@ -136,6 +146,36 @@ public class OqlExecutionService implements DisposableBean {
     }
 
     /** Shortest path to a GC root of one object of an open dump. */
+    /** Executed queries of this session, newest first, for reports; of one snapshot when {@code snapshotId} is set. */
+    public List<OqlHistoryEntryDto> history(String snapshotId) {
+        synchronized (history) {
+            List<OqlHistoryEntryDto> result = new ArrayList<>();
+            for (OqlHistoryEntryDto entry : history) {
+                if (snapshotId == null || snapshotId.equals(entry.snapshotId())) {
+                    result.add(entry);
+                }
+            }
+            return result;
+        }
+    }
+
+    private void remember(OqlResultDto result) {
+        List<List<String>> preview = new ArrayList<>();
+        for (List<OqlValueDto> row : result.rows().subList(0, Math.min(HISTORY_PREVIEW_ROWS, result.rows().size()))) {
+            List<String> cells = new ArrayList<>(row.size());
+            row.forEach(cell -> cells.add(cell == null ? "" : cell.text()));
+            preview.add(cells);
+        }
+        OqlHistoryEntryDto entry = new OqlHistoryEntryDto(result.snapshotId(), result.query(), Instant.now(),
+                result.rowCount(), result.durationMs(), result.truncated(), result.columns(), preview);
+        synchronized (history) {
+            history.addFirst(entry);
+            while (history.size() > HISTORY_SIZE) {
+                history.removeLast();
+            }
+        }
+    }
+
     public GcRootPathDto path(String snapshotId, long objectId, PathMode mode) {
         return registry.withHeap(snapshotId, open -> {
             Heap heap = open.heap();

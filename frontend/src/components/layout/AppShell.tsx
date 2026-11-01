@@ -1,11 +1,13 @@
 import { type DragEvent } from 'react';
 import { DotTraceCpuAndTimelineView } from '@/features/cpu/DotTraceCpuAndTimelineView';
 import { SnapshotDiffView } from '@/features/diff/SnapshotDiffView';
+import { GcLogAnalyzerView } from '@/features/gc/GcLogAnalyzerView';
 import { DominatorTreeView } from '@/features/heap/DominatorTreeView';
 import { HeuristicsAdvisorView } from '@/features/heuristics/HeuristicsAdvisorView';
 import { LiveDashboardView } from '@/features/live/LiveDashboardView';
 import { OqlConsoleView } from '@/features/oql/OqlConsoleView';
 import { ReportModal } from '@/features/reports/ReportModal';
+import { ThreadsAndContentionView } from '@/features/threads/ThreadsAndContentionView';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { Sidebar } from './Sidebar';
 import { SnapshotTimeline } from './SnapshotTimeline';
@@ -44,6 +46,8 @@ export function AppShell() {
           {view === 'diff' && <SnapshotDiffView />}
           {view === 'oql' && <OqlConsoleView />}
           {view === 'cpu' && <DotTraceCpuAndTimelineView />}
+          {view === 'threads' && <ThreadsAndContentionView />}
+          {view === 'gc' && <GcLogAnalyzerView />}
         </main>
       </div>
       <SnapshotTimeline />

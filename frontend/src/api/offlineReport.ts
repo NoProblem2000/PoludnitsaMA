@@ -1,7 +1,8 @@
 import type { SessionReportBundle } from './types';
 
 const MAX_REPORT_BYTES = 512 * 1024 * 1024;
-export const SUPPORTED_FORMAT_VERSION = 1;
+/** 1: memory (steps 1–8); 2: plus CPU profiles, threads & contention, GC analyses and OQL history */
+export const SUPPORTED_FORMAT_VERSION = 2;
 
 /**
  * Reads an exported report ({@code .json.gz} or {@code .json}) entirely in the browser, so a report taken on a
@@ -38,7 +39,8 @@ function validate(value: unknown): SessionReportBundle {
     throw new Error('Пустой или повреждённый отчёт');
   }
   const bundle = value as Partial<SessionReportBundle>;
-  if (bundle.formatVersion !== SUPPORTED_FORMAT_VERSION) {
+  if (typeof bundle.formatVersion !== 'number' || bundle.formatVersion < 1
+    || bundle.formatVersion > SUPPORTED_FORMAT_VERSION) {
     throw new Error(`Неподдерживаемая версия формата отчёта: ${String(bundle.formatVersion)}`);
   }
   if (!Array.isArray(bundle.snapshots) || !Array.isArray(bundle.findings)) {
@@ -48,5 +50,10 @@ function validate(value: unknown): SessionReportBundle {
     ...bundle,
     metricsHistory: bundle.metricsHistory ?? [],
     diffs: bundle.diffs ?? [],
+    profiles: bundle.profiles ?? [],
+    threadSeries: bundle.threadSeries ?? [],
+    threadsLive: bundle.threadsLive ?? null,
+    gcAnalyses: bundle.gcAnalyses ?? [],
+    oqlQueries: bundle.oqlQueries ?? [],
   } as SessionReportBundle;
 }

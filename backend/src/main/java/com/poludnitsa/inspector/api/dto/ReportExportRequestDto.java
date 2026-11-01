@@ -14,17 +14,24 @@ import java.util.List;
  * @param diffs                 comparisons to include; empty: oldest vs newest snapshot per process
  * @param includeMetricsHistory include the live chart history of {@code pid} (default {@code true})
  * @param title                 report title; {@code null}: generated
+ * @param includeDiagnostics    include CPU profiles, thread series, live contention, GC analyses and OQL history
+ *                              (default {@code true})
  */
 public record ReportExportRequestDto(
         @Positive Long pid,
         @Size(max = 100) List<@Pattern(regexp = "^[A-Za-z0-9-]{1,64}$") String> snapshotIds,
         @Size(max = 20) List<@Valid DiffPairDto> diffs,
         Boolean includeMetricsHistory,
-        @Size(max = 200) String title
+        @Size(max = 200) String title,
+        Boolean includeDiagnostics
 ) {
     public ReportExportRequestDto {
         snapshotIds = snapshotIds == null ? List.of() : List.copyOf(snapshotIds);
         diffs = diffs == null ? List.of() : List.copyOf(diffs);
+    }
+
+    public boolean diagnosticsIncluded() {
+        return includeDiagnostics == null || includeDiagnostics;
     }
 
     public boolean metricsHistoryIncluded() {

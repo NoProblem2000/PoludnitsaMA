@@ -85,6 +85,14 @@ export const http = {
     return json<T>('POST', url, form);
   },
 
+  /** Multipart POST of one file that returns a file (offline report → HTML). */
+  async uploadDownload(url: string, part: string, file: File, fallbackName: string): Promise<Download> {
+    const form = new FormData();
+    form.append(part, file, file.name);
+    const response = await send('POST', url, form);
+    return { blob: await response.blob(), fileName: fileNameOf(response, fallbackName) };
+  },
+
   /** POST that returns a file (report export). */
   async download(url: string, body: unknown, fallbackName: string): Promise<Download> {
     const response = await send('POST', url, body);

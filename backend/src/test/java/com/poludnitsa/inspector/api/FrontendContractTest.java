@@ -7,12 +7,14 @@ import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.poludnitsa.inspector.api.rest.AboutController;
+import com.poludnitsa.inspector.api.rest.GcController;
 import com.poludnitsa.inspector.api.rest.HeapQueryController;
 import com.poludnitsa.inspector.api.rest.InspectionController;
 import com.poludnitsa.inspector.api.rest.ProcessControlController;
 import com.poludnitsa.inspector.api.rest.ProfilerController;
 import com.poludnitsa.inspector.api.rest.ReportController;
 import com.poludnitsa.inspector.api.rest.SnapshotController;
+import com.poludnitsa.inspector.api.rest.ThreadsController;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -64,14 +66,14 @@ class FrontendContractTest {
     private static final Set<String> TS_ONLY = Set.of("LiveStreamClientMessage");
     private static final List<Class<?>> CONTROLLERS = List.of(ProcessControlController.class, SnapshotController.class,
             ReportController.class, InspectionController.class, AboutController.class, HeapQueryController.class,
-            ProfilerController.class);
+            ProfilerController.class, ThreadsController.class, GcController.class);
 
     private static final Pattern INTERFACE = Pattern.compile("(?ms)^export interface (\\w+)(?:<\\w+>)? \\{\\n(.*?)^}");
     private static final Pattern FIELD = Pattern.compile("(?m)^  (\\w+)(\\??): (.+);$");
     private static final Pattern UNION = Pattern.compile("(?ms)^export type (\\w+) =(.*?);$");
     private static final Pattern LITERAL = Pattern.compile("'([A-Z0-9_]+)'");
     private static final Pattern CALL = Pattern.compile(
-            "http\\.(get|text|post|put|del|download|upload)(?:<[^>]+(?:<[^>]+>)?[^>]*>)?\\(\\s*(['`])(.*?)\\2(.*?)\\)[,;]?\\s*$",
+            "http\\.(get|text|post|put|del|download|uploadDownload|upload)(?:<[^>]+(?:<[^>]+>)?[^>]*>)?\\(\\s*(['`])(.*?)\\2(.*?)\\)[,;]?\\s*$",
             Pattern.MULTILINE | Pattern.DOTALL);
 
     private static String types;
@@ -307,7 +309,7 @@ class FrontendContractTest {
                     problems.add(verb + " " + path + ": unknown query parameter '" + name + "', backend has " + params);
                 }
             }
-            if (call.group(1).equals("upload")) {
+            if (call.group(1).startsWith("upload")) {
                 Matcher part = Pattern.compile("^\\s*,\\s*'(\\w+)'").matcher(rest);
                 if (!part.find() || !parts.contains(part.group(1))) {
                     problems.add(verb + " " + path + ": multipart part does not match " + parts);

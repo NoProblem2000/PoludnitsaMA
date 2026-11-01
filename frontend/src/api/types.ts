@@ -474,6 +474,8 @@ export interface ReportExportRequestDto {
   diffs?: DiffPairDto[];
   includeMetricsHistory?: boolean;
   title?: string | null;
+  /** CPU profiles, thread series, live contention, GC analyses and OQL history (default true) */
+  includeDiagnostics?: boolean | null;
 }
 
 export interface SessionReportBundle {
@@ -489,6 +491,12 @@ export interface SessionReportBundle {
   snapshots: { summary: SnapshotSummaryDto; data: SnapshotDataDto }[];
   diffs: SnapshotDiffDto[];
   findings: InspectionFindingDto[];
+  /** format 2+: absent in format 1 files */
+  profiles: ProfileReportDto[];
+  threadSeries: ThreadSeriesAnalysisDto[];
+  threadsLive: ThreadLiveDto | null;
+  gcAnalyses: GcAnalysisDto[];
+  oqlQueries: OqlHistoryEntryDto[];
 }
 
 export interface ImportedReportDto {
@@ -856,4 +864,331 @@ export interface SubsystemBreakdownDto {
   subsystems: SubsystemShareDto[];
   traced: TracedEventStatDto[];
   exceptions: ExceptionCountDto[];
+}
+
+// ---------------------------------------------------------------- threads & contention, GC (step 10)
+
+export type DiagnosticSource = 'LIVE' | 'FILE';
+
+export type JobStatus = 'RUNNING' | 'READY' | 'FAILED';
+
+export type JvmThreadState = 'NEW' | 'RUNNABLE' | 'BLOCKED' | 'WAITING' | 'TIMED_WAITING' | 'TERMINATED';
+
+export type StuckKind = 'CPU_LOOP' | 'DB_QUERY' | 'IO_WAIT' | 'LOCK_WAIT' | 'RUNNABLE';
+
+export type LockKind = 'MONITOR' | 'SYNCHRONIZER';
+
+export type GcPauseCategory = 'YOUNG' | 'MIXED' | 'FULL' | 'HUMONGOUS' | 'REMARK' | 'CLEANUP' | 'CONCURRENT_PAUSE' | 'OTHER';
+
+export interface StackFrameDto {
+  className: string;
+  methodName: string;
+  fileName: string | null;
+  lineNumber: number;
+  packageCategory: PackageCategory;
+  locks: string[];
+}
+
+export interface DeadlockNodeDto {
+  threadId: number;
+  threadName: string;
+  state: JvmThreadState;
+  waitingForLock: string | null;
+  waitingForLockClass: string | null;
+  lockKind: LockKind | null;
+  heldByThreadId: number;
+  heldByThreadName: string | null;
+  heldLocks: string[];
+  stack: StackFrameDto[];
+}
+
+export interface DeadlockDto {
+  detectedAt: string;
+  kind: LockKind;
+  cycle: DeadlockNodeDto[];
+}
+
+export interface MonitorContentionDto {
+  lockClass: string;
+  lockKind: LockKind | null;
+  blockedAt: string;
+  applicationFrame: string | null;
+  blockedTimeMs: number;
+  blockedCount: number;
+  samples: number;
+  threads: number;
+  serverThreads: number;
+  timeMeasured: boolean;
+  topThreads: string[];
+  topOwners: string[];
+  ownerFrame: string | null;
+}
+
+export interface LiveThreadDto {
+  threadId: number;
+  name: string;
+  state: JvmThreadState;
+  daemon: boolean;
+  serverThread: boolean;
+  cpuMs: number | null;
+  cpuPercent: number | null;
+  blockedCount: number;
+  blockedTimeMs: number | null;
+  waitedCount: number;
+  waitedTimeMs: number | null;
+  lockName: string | null;
+  lockOwnerName: string | null;
+  topFrame: string | null;
+}
+
+export interface ThreadLiveDto {
+  pid: number;
+  capturedAt: string | null;
+  samplingSince: string;
+  samples: number;
+  sampleIntervalMs: number;
+  threadCount: number;
+  daemonCount: number;
+  peakThreadCount: number;
+  states: Partial<Record<JvmThreadState, number>>;
+  contentionMonitoring: boolean;
+  cpuTimeMonitoring: boolean;
+  deadlocks: DeadlockDto[];
+  contention: MonitorContentionDto[];
+  threads: LiveThreadDto[];
+}
+
+export interface ThreadSeriesRequestDto {
+  pid: number;
+  dumps: number;
+  intervalMs: number;
+}
+
+export interface ThreadSeriesSummaryDto {
+  seriesId: string;
+  source: DiagnosticSource;
+  pid: number | null;
+  name: string;
+  status: JobStatus;
+  startedAt: string;
+  dumpsRequested: number;
+  dumpsTaken: number;
+  intervalMs: number | null;
+  progressMessage: string | null;
+  errorMessage: string | null;
+  threadCount: number;
+  stuckCount: number;
+  deadlockCount: number;
+  clusterCount: number;
+}
+
+export interface ThreadDumpMetaDto {
+  index: number;
+  capturedAt: string | null;
+  offsetMs: number | null;
+  threadCount: number;
+  states: Partial<Record<JvmThreadState, number>>;
+  jvmInfo: string | null;
+}
+
+export interface ThreadCellDto {
+  state: JvmThreadState | null;
+  stackId: number;
+  sameAsPrevious: boolean;
+  topFrame: string | null;
+  lockName: string | null;
+  cpuDeltaMs: number | null;
+}
+
+export interface ThreadSeriesRowDto {
+  name: string;
+  threadId: number | null;
+  daemon: boolean;
+  serverThread: boolean;
+  idle: boolean;
+  stuck: boolean;
+  clusterId: number | null;
+  /** null: the thread is not in that dump */
+  cells: (ThreadCellDto | null)[];
+}
+
+export interface StuckThreadDto {
+  name: string;
+  threadId: number | null;
+  state: JvmThreadState;
+  kind: StuckKind;
+  reason: string;
+  fromDump: number;
+  toDump: number;
+  dumps: number;
+  durationMs: number | null;
+  cpuDeltaMs: number | null;
+  lockName: string | null;
+  serverThread: boolean;
+  stack: StackFrameDto[];
+}
+
+export interface StackClusterDto {
+  clusterId: number;
+  dumpIndex: number;
+  state: JvmThreadState;
+  threadCount: number;
+  threads: string[];
+  topFrame: string | null;
+  lockName: string | null;
+  stackId: number;
+}
+
+export interface ThreadSeriesAnalysisDto {
+  summary: ThreadSeriesSummaryDto;
+  dumps: ThreadDumpMetaDto[];
+  rows: ThreadSeriesRowDto[];
+  stacks: StackFrameDto[][];
+  stuck: StuckThreadDto[];
+  clusters: StackClusterDto[];
+  deadlocks: DeadlockDto[];
+  contention: MonitorContentionDto[];
+  contentionTimed: boolean;
+}
+
+export interface GcLiveRequestDto {
+  pid: number;
+  durationSeconds: number;
+}
+
+export interface GcAnalysisSummaryDto {
+  analysisId: string;
+  source: DiagnosticSource;
+  pid: number | null;
+  name: string;
+  status: JobStatus;
+  startedAt: string;
+  durationSeconds: number | null;
+  progressMessage: string | null;
+  errorMessage: string | null;
+  collector: string | null;
+  jvmVersion: string | null;
+  pauseCount: number;
+  coveredMs: number;
+}
+
+export interface GcKpiDto {
+  throughputPercent: number;
+  totalPauseMs: number;
+  maxPauseMs: number;
+  avgPauseMs: number;
+  p95PauseMs: number;
+  p99PauseMs: number;
+  pauseCount: number;
+  youngCount: number;
+  mixedCount: number;
+  fullCount: number;
+  allocationRateMbPerSec: number | null;
+  promotionRateMbPerSec: number | null;
+  peakHeapMb: number | null;
+  avgHeapAfterGcMb: number | null;
+  safepointTotalMs: number | null;
+}
+
+export interface GcPauseDto {
+  gcId: number;
+  uptimeMs: number;
+  category: GcPauseCategory;
+  name: string;
+  cause: string | null;
+  pauseMs: number;
+  heapBeforeMb: number | null;
+  heapAfterMb: number | null;
+  heapTotalMb: number | null;
+}
+
+export interface GcRateSampleDto {
+  uptimeMs: number;
+  allocationMbPerSec: number;
+  promotionMbPerSec: number | null;
+  pauseMs: number;
+}
+
+export interface GcCauseStatDto {
+  cause: string;
+  count: number;
+  totalPauseMs: number;
+  maxPauseMs: number;
+  percentOfPauses: number;
+  severity: Severity;
+  advice: string | null;
+}
+
+export interface SafepointEventDto {
+  uptimeMs: number;
+  operation: string;
+  ttspMs: number;
+  operationMs: number;
+  totalMs: number;
+  slowTtsp: boolean;
+}
+
+export interface SafepointOperationStatDto {
+  operation: string;
+  count: number;
+  totalMs: number;
+  maxTotalMs: number;
+  maxTtspMs: number;
+}
+
+export interface SafepointSummaryDto {
+  count: number;
+  totalMs: number;
+  maxTtspMs: number;
+  avgTtspMs: number;
+  ttspWarningMs: number;
+  slowTtspCount: number;
+  operations: SafepointOperationStatDto[];
+  slowest: SafepointEventDto[];
+}
+
+export interface GcFindingDto {
+  severity: Severity;
+  code: string;
+  title: string;
+  detail: string;
+  advice: string | null;
+}
+
+export interface GcAnalysisDto {
+  summary: GcAnalysisSummaryDto;
+  kpi: GcKpiDto;
+  pauses: GcPauseDto[];
+  rates: GcRateSampleDto[];
+  causes: GcCauseStatDto[];
+  safepoints: SafepointSummaryDto;
+  findings: GcFindingDto[];
+  concurrentCycles: number;
+  parsedLines: number;
+  unparsedLines: number;
+  truncated: boolean;
+}
+
+export interface OqlHistoryEntryDto {
+  snapshotId: string;
+  query: string;
+  executedAt: string;
+  rowCount: number;
+  durationMs: number;
+  truncated: boolean;
+  columns: string[];
+  preview: string[][];
+}
+
+export interface ProfileMetricReportDto {
+  metric: ProfileMetric;
+  flame: FlameGraphDto | null;
+  hotspots: HotspotDto[];
+  subsystems: SubsystemBreakdownDto | null;
+}
+
+export interface ProfileReportDto {
+  summary: ProfileSummaryDto;
+  timeline: TimelineDto;
+  metrics: ProfileMetricReportDto[];
 }

@@ -24,6 +24,7 @@ import { palette } from '@/theme/palette';
 import { formatDuration, formatNumber, formatTime } from '@/utils/format';
 import { FlameGraphView, fromDiff, fromFlame } from './FlameGraphView';
 import { HotspotsButterflyPanel, type MethodRef } from './HotspotsButterflyPanel';
+import { OfflineProfilesView } from './OfflineProfilesView';
 import { ProfileTimeline, type TimeWindow } from './ProfileTimeline';
 import { formatMs, formatValue, METRIC_HINT, METRIC_LABEL } from './profileFormat';
 import { SubsystemsPanel } from './SubsystemsPanel';
@@ -279,6 +280,7 @@ function ProfileCard({ profile, active, baseline, now, onOpen, onBaseline, onDel
  */
 export function DotTraceCpuAndTimelineView() {
   const mode = useInspectorStore((s) => s.mode);
+  const offlineProfiles = useInspectorStore((s) => s.offlineReport?.profiles);
   const activePid = useInspectorStore((s) => s.activePid);
   const pushToast = useInspectorStore((s) => s.pushToast);
   const now = useNow(500);
@@ -414,11 +416,7 @@ export function DotTraceCpuAndTimelineView() {
   }
 
   if (mode !== 'live') {
-    return (
-      <EmptyState icon={<Cpu size={22} />} title="CPU-профилирование доступно только в live-режиме">
-        Отчёты не содержат профилей: подключитесь к процессу JVM и запишите профиль через JFR или async-profiler.
-      </EmptyState>
-    );
+    return <OfflineProfilesView profiles={offlineProfiles ?? []} />;
   }
 
   const unit = metric === 'ALLOC' ? 'bytes' : 'us';

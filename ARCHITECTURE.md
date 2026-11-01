@@ -77,7 +77,9 @@ score ограничен 80. Обход кучи — safepoint-пауза: её 
 | `snapshot` | `SafeHeapDumpService` — проверка `usableSpace >= 2.5 × heapUsed` (507 `INSUFFICIENT_DISK_SPACE`, повторно прямо перед дампом), `HotSpotDiagnosticMXBean.dumpHeap(path, live)` в личную директорию снапшота, один deep-снапшот за раз, финальный статус публикуется только после удаления файлов. `HprofSanitizer` — однопроходный ремонт висячих `ROOT_STICKY_CLASS` (баг NetBeans RELEASE210–310 на дампах JDK 17+). `ObjectGraphAnalyzer` — `HeapFactory.createHeap` (mmap + дисковые индексы), топ-200 объектов по retained, retained по классам, `GcRootPathResolver` (путь с именами полей / `static` / индексами массивов), группы памяти. `DumpFileCleaner` — удаление `work/<id>/` (`heap.hprof` + `heap.hprof.nbcache/NBProfiler*`) в `finally`, shutdown hook, чистка остатков при старте, ретраи (на Windows mmap держит файл до GC). `SnapshotStore` — сессия в памяти + `summaries/<id>.json.gz` (переживает рестарт). `HistogramSnapshotService`, `SnapshotDiffService` (дельты и ранжирование по «аномальному выживанию»). |
 | `heap` | `HeapReader` — типизированное чтение открытого дампа: поля, `String` (Java 9+ `byte[]`+`coder` и Java 8 `char[]`), `byte[]`, все JDK-коллекции без запуска их кода (`size`, обход `Map`/`List`/очередей), входящие ссылки, «владелец» поверх внутренностей коллекций. `GcRootPathResolver`, `LongIntHashMap` (примитивный счётчик для миллионов строк). |
 | `inspection` | `LeakInspectionRule` (SPI: Spring-бин = новое правило), `LeakHeuristicsEngine` (бюджет времени на правило, изоляция ошибок, сортировка, удаление общих JVM-находок, дублирующих специализированные), `InspectionContext`, `FindingBuilder`. Правила: `rules.jakarta` — `WildFlyClassLoaderLeakInspector`, `ThreadLocalLeakInspector`, `CdiScopeMismatchInspector`, `HibernatePersistenceContextBloatInspector`, `UndertowHttpSessionBloatInspector`; `rules.hazelcast` — `HazelcastSerializedHeapDataInspector` (+ `HazelcastPayloadDecoder`), `OrphanedHazelcastListenerInspector`; `rules.jvm` — `UnboundedCollectionAndCacheInspector`, `DuplicateStringsAndByteArraysInspector`. Запускаются внутри `ObjectGraphAnalyzer`, пока дамп открыт. |
-| `report` | `ReportExportImportService` — `SessionReportBundle` (процесс, история графиков, снапшоты с dominators/классами/группами/findings, diff'ы) в `.json.gz` и обратно (лимит 512 MiB после распаковки, импортированные снапшоты получают свои id), `HtmlReportRenderer` — автономный HTML без внешних ресурсов, всё из кучи экранируется. |
+| `report` | `ReportExportImportService` — `SessionReportBundle` (процесс, история графиков, снапшоты с dominators/классами/группами/findings, diff'ы, с формата 2 — CPU-профили, серии thread dump-ов, live-контеншн, GC-анализы, история OQL) в `.json.gz` и обратно (лимит 512 MiB после распаковки, импортированные снапшоты получают свои id), `HtmlReportRenderer` + `DiagnosticsHtmlSections` — автономный HTML без внешних ресурсов, всё из кучи экранируется. |
+| `threads` | `ThreadContentionAndSeriesService`, `ContentionAggregator`, `DeadlockDetector`, `ThreadDumpSeriesAnalyzer`, `JstackParser` — см. «Шаг 10». |
+| `gc` | `GcLogParserAndAnalyzerService`, `UnifiedGcLogParser`, `JfrGcParser`, `GcLogData`, `GcLogAnalyzer` — см. «Шаг 10». |
 | `common` | Исключения (`TargetNotAttachableException`, `InsufficientDiskSpaceException`), `Bytes` (форматирование), `Ids`. |
 
 ### Важные эксплуатационные детали
@@ -122,6 +124,10 @@ src/
 │   ├── heuristics/         # HeuristicsAdvisorView: диагнозы по severity/категориям, виновник, путь, why, fix
 │   ├── heap/               # DominatorTreeView (sunburst + виртуализированное дерево), dominatorTree.ts
 │   ├── diff/               # SnapshotDiffView (+Δ/−Δ, виртуализация), localDiff.ts (diff отчёта в браузере)
+│   ├── oql/                # OqlConsoleView (+ история запросов офлайн-отчёта)
+│   ├── cpu/                # DotTraceCpuAndTimelineView, ProfileTimeline, FlameGraphView, OfflineProfilesView
+│   ├── threads/            # ThreadsAndContentionView, DeadlockGraph, ContentionTable, ThreadMatrix
+│   ├── gc/                 # GcLogAnalyzerView, GcCharts
 │   └── reports/            # ReportModal: drag-and-drop импорт, экспорт JSON/HTML
 ├── hooks/                  # useNow, useClickOutside
 └── utils/                  # format (байты, скорости, аптайм), categories (группы, цвета), gcRoots (тип корня)
@@ -172,6 +178,45 @@ src/
   на таймлайне интервала. Frontend: `features/cpu/DotTraceCpuAndTimelineView.tsx` (форма, карточки профилей, вкладки),
   `ProfileTimeline` (SVG-дорожки с brush), `FlameGraphView` (обычный и differential), `HotspotsButterflyPanel`,
   `SubsystemsPanel`.
+
+### Шаг 10: Threads & Contention, GC & Safepoints, единый отчёт
+* **Только JMX цели.** `ThreadContentionAndSeriesService` работает с `ThreadMXBean` целевой JVM через
+  `MBeanServerConnection` (`invoke` / `getAttribute` по `java.lang:type=Threading`, `ThreadInfo.from(CompositeData)`
+  локально); live-GC — JFR-запись в цели через `FlightRecorderMXBean` (`JfrProfileRecorder` с настройками
+  `JfrGcParser.settings()`), файл переносится по JMX и читается `RecordingFile`. `RecordingStream` нигде не
+  используется. Свой PID отклоняется (`400 SELF_MONITORING_FORBIDDEN`).
+* **Live (`/api/threads/{pid}/live`).** Сэмплер PID стартует при первом GET и живёт, пока UI его опрашивает
+  (`live-idle-timeout`). Каждые `sample-interval` — `dumpAllThreads(false,false,depth)` → `ContentionAggregator`:
+  ключ «класс lock'а + строка, где ждут», время — по дельтам `blockedTime` (`waitedTime` для
+  `java.util.concurrent`-синхронизаторов), при выключенном contention monitoring — оценка по сэмплам (≈);
+  потоки WildFly / Undertow (`default task-*`, `XNIO-*`) считаются отдельно. Каждые `deadlock-check-interval` —
+  `findDeadlockedThreads` + `findMonitorDeadlockedThreads`, `DeadlockDetector` строит кольца
+  «поток → lock → владелец», CPU потоков и счётчики. Флаги `ThreadContentionMonitoringEnabled` /
+  `ThreadCpuTimeEnabled` включаются со счётчиком ссылок и возвращаются в исходное значение.
+* **Серии (`/api/threads/series`).** N дампов `dumpAllThreads(true,true)` с интервалом (между ними — сэмплы
+  контеншна) или jstack / `jcmd Thread.print` (`JstackParser`, несколько дампов в одном файле, лимит 256 MiB).
+  `ThreadDumpSeriesAnalyzer`: интернированные стеки, матрица Thread × Dump (`sameAsPrevious` → «=»), зависшие
+  потоки — тот же стек в `stuck-min-dumps`+ дампах подряд в RUNNABLE / BLOCKED, вид (CPU_LOOP, DB_QUERY, IO_WAIT,
+  LOCK_WAIT) по стеку и приросту CPU; кластеры одинаковых стеков; deadlock-и по lock'ам дампа.
+* **GC (`/api/gc`).** `UnifiedGcLogParser` — потоковый разбор `-Xlog:gc*,safepoint*` с любыми декорациями
+  (`[time]`, `[uptime]` s/ms/ns, `[level]`, `[tags]`): G1 / Parallel / Serial / ZGC (в т. ч. generational `Y:`/`O:`)
+  / Shenandoah, safepoint-строки JDK 11 и 17+; `.gz` распаковывается, `.jfr` распознаётся по сигнатуре `FLR`.
+  `JfrGcParser` — `GarbageCollection`, `GCPhasePause`, `G1/PS/GCHeapSummary`, `SafepointBegin` /
+  `SafepointStateSynchronization` / `ExecuteVMOperation`, `EvacuationFailed`, `ZAllocationStall`. Оба дают
+  `GcLogData`; `GcLogAnalyzer` считает throughput = 1 − Σpause / покрытое время, max / avg / p95 / p99, allocation
+  rate по росту кучи между сборками, promotion rate по росту old gen в young / mixed паузах, окна для графика,
+  причины с советами и severity, safepoint-ы (TTSP против операции, порог `ttsp-warning`) и findings (низкий
+  throughput, Full GC, System.gc(), Humongous, Metadata GC Threshold, evacuation failure, allocation stall,
+  degenerated GC, долгий TTSP, рост live set…).
+* **Отчёт формата 2.** `ReportExportRequestDto.includeDiagnostics` (по умолчанию да) добавляет в
+  `SessionReportBundle` готовые профили (`CpuAndTimelineProfilerService.reportProfiles`), серии и live-снимок
+  потоков, GC-анализы и историю OQL (`OqlExecutionService.history`: 50 запросов с первыми 20 строками).
+  Отчёты формата 1 читаются (новые поля — пустые списки). `POST /api/reports/html` рендерит HTML из файла
+  отчёта без импорта (офлайн-режим UI).
+* **Frontend.** `features/threads` — `ThreadsAndContentionView` (live, серии, офлайн), `DeadlockGraph` (SVG-кольцо),
+  `ContentionTable`, `ThreadMatrix`; `features/gc` — `GcLogAnalyzerView` (drop-зона, live-запись, KPI, findings,
+  причины, safepoint-ы) и `GcCharts` (ECharts scatter / line). Сайдбар разделён на «Память» и «Производительность».
+  Офлайн-отчёт показывает CPU-профили (`OfflineProfilesView`), историю OQL, потоки и GC из файла.
 
 ### Релизный контур
 * `mvn clean package -Prelease` (профиль `release` в `backend/pom.xml`): UI всегда собирается (`-DskipUi`

@@ -1,0 +1,700 @@
+[2026-11-01T15:24:57.953+0300][0.017s][info][gc] Min heap equals to max heap, disabling ShenandoahUncommit
+[2026-11-01T15:24:57.960+0300][0.023s][info][gc] Heuristics ergonomically sets -XX:+ExplicitGCInvokesConcurrent
+[2026-11-01T15:24:57.960+0300][0.023s][info][gc] Heuristics ergonomically sets -XX:+ShenandoahImplicitGCInvokesConcurrent
+[2026-11-01T15:24:57.960+0300][0.023s][info][gc] Using Shenandoah
+[2026-11-01T15:24:57.960+0300][0.024s][info][gc,ergo] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:57.960+0300][0.024s][info][gc,init] Version: 21.0.12.1+1-LTS (release)
+[2026-11-01T15:24:57.960+0300][0.024s][info][gc,init] CPUs: 16 total, 16 available
+[2026-11-01T15:24:57.960+0300][0.024s][info][gc,init] Memory: 26431M
+[2026-11-01T15:24:57.960+0300][0.024s][info][gc,init] Large Page Support: Disabled
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] NUMA Support: Disabled
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Compressed Oops: Enabled (32-bit)
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heap Min Capacity: 6656K
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heap Initial Capacity: 128M
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heap Max Capacity: 128M
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Pre-touch: Disabled
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Mode: Snapshot-At-The-Beginning (SATB)
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heuristics: Adaptive
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heap Region Count: 512
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Heap Region Size: 256K
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] TLAB Size Max: 256K
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Humongous Object Threshold: 256K
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Parallel Workers: 8
+[2026-11-01T15:24:57.960+0300][0.025s][info][gc,init] Concurrent Workers: 4
+[2026-11-01T15:24:57.971+0300][0.031s][info][gc,metaspace] CDS archive(s) mapped at: [0x000002c000000000-0x000002c000c80000-0x000002c000c80000), size 13107200, SharedBaseAddress: 0x000002c000000000, ArchiveRelocationMode: 1.
+[2026-11-01T15:24:57.971+0300][0.031s][info][gc,metaspace] Compressed class space mapped at: 0x000002c001000000-0x000002c041000000, reserved size: 1073741824
+[2026-11-01T15:24:57.971+0300][0.031s][info][gc,metaspace] Narrow klass base: 0x000002c000000000, Narrow klass shift: 0, Narrow klass range: 0x100000000
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc          ] Trigger: Learning 1 of 5. Free (89389K) is below initial threshold (91750K)
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc,ergo     ] Free: 89389K, Max: 256K regular, 89344K humongous, Frag: 0% external, 0% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc,start    ] GC(0) Concurrent reset
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc,task     ] GC(0) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc,ergo     ] GC(0) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.210+0300][0.270s][info][gc          ] GC(0) Concurrent reset 0.392ms
+[2026-11-01T15:24:58.210+0300][0.271s][info][safepoint,cleanup] updating inline caches, 0.0000576 secs
+[2026-11-01T15:24:58.210+0300][0.271s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0001262 secs
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc,start         ] GC(0) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc,task          ] GC(0) Using 5 of 8 workers for init marking
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc,ergo          ] GC(0) Pacer for Mark. Expected Live: 13107K, Free: 89389K, Non-Taxable: 8938K, Alloc Tax Rate: 0.2x
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc               ] GC(0) Pause Init Mark (unload classes) 0.214ms
+[2026-11-01T15:24:58.210+0300][0.271s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 234334200 ns, Reaching safepoint: 22500 ns, Cleanup: 149500 ns, At safepoint: 251100 ns, Leaving safepoint: 800 ns, Total: 423900 ns
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc,start         ] GC(0) Concurrent marking roots
+[2026-11-01T15:24:58.210+0300][0.271s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.210+0300][0.272s][info][gc               ] GC(0) Concurrent marking roots 0.362ms
+[2026-11-01T15:24:58.210+0300][0.272s][info][gc,start         ] GC(0) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.210+0300][0.272s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc               ] GC(0) Concurrent marking (unload classes) 11.281ms
+[2026-11-01T15:24:58.221+0300][0.283s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.221+0300][0.283s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000442 secs
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,start         ] GC(0) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,task          ] GC(0) Using 5 of 8 workers for final marking
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,ergo          ] GC(0) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 116M, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,ergo          ] GC(0) Collectable Garbage: 25590K (99%), Immediate: 22905K (89%), CSet: 2684K (10%)
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,ergo          ] GC(0) Pacer for Evacuation. Used CSet: 2979K, Free: 111M, Non-Taxable: 11417K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc               ] GC(0) Pause Final Mark (unload classes) 0.198ms
+[2026-11-01T15:24:58.221+0300][0.283s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 12100300 ns, Reaching safepoint: 3400 ns, Cleanup: 61000 ns, At safepoint: 222500 ns, Leaving safepoint: 700 ns, Total: 287600 ns
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,start         ] GC(0) Concurrent thread roots
+[2026-11-01T15:24:58.221+0300][0.283s][info][gc,task          ] GC(0) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc               ] GC(0) Concurrent thread roots 0.216ms
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,start         ] GC(0) Concurrent weak references
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,ref           ] GC(0) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,ref           ] GC(0) Discovered  references: Soft: 0, Weak: 0, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,ref           ] GC(0) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc               ] GC(0) Concurrent weak references 0.144ms
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,start         ] GC(0) Concurrent weak roots
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc               ] GC(0) Concurrent weak roots 0.270ms
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,start         ] GC(0) Concurrent cleanup
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc               ] GC(0) Concurrent cleanup 31M->9M(128M) 0.031ms
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,ergo          ] GC(0) Free: 111M, Max: 256K regular, 93440K humongous, Frag: 19% external, 0% internal; Reserve: 6647K, Max: 256K
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,start         ] GC(0) Concurrent class unloading
+[2026-11-01T15:24:58.221+0300][0.284s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc               ] GC(0) Concurrent class unloading 0.312ms
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc,start         ] GC(0) Concurrent strong roots
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc               ] GC(0) Concurrent strong roots 0.126ms
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc,start         ] GC(0) Concurrent evacuation
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:58.221+0300][0.285s][info][gc               ] GC(0) Concurrent evacuation 0.357ms
+[2026-11-01T15:24:58.221+0300][0.285s][info][safepoint,cleanup] updating inline caches, 0.0000002 secs
+[2026-11-01T15:24:58.226+0300][0.285s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000471 secs
+[2026-11-01T15:24:58.226+0300][0.285s][info][gc,start         ] GC(0) Pause Init Update Refs
+[2026-11-01T15:24:58.226+0300][0.285s][info][gc,ergo          ] GC(0) Pacer for Update Refs. Used: 9940K, Free: 111M, Non-Taxable: 11417K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.226+0300][0.285s][info][gc               ] GC(0) Pause Init Update Refs 0.066ms
+[2026-11-01T15:24:58.226+0300][0.286s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 2066000 ns, Reaching safepoint: 2800 ns, Cleanup: 71200 ns, At safepoint: 90300 ns, Leaving safepoint: 600 ns, Total: 164900 ns
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc,start         ] GC(0) Concurrent update references
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc,task          ] GC(0) Using 3 of 8 workers for concurrent reference update
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc               ] GC(0) Concurrent update references 0.504ms
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc,start         ] GC(0) Concurrent update thread roots
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc               ] GC(0) Concurrent update thread roots 0.205ms
+[2026-11-01T15:24:58.226+0300][0.286s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.226+0300][0.286s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000445 secs
+[2026-11-01T15:24:58.226+0300][0.286s][info][gc,start         ] GC(0) Pause Final Update Refs
+[2026-11-01T15:24:58.226+0300][0.287s][info][gc,task          ] GC(0) Using 5 of 8 workers for final reference update
+[2026-11-01T15:24:58.226+0300][0.287s][info][gc               ] GC(0) Pause Final Update Refs 0.059ms
+[2026-11-01T15:24:58.226+0300][0.287s][info][safepoint        ] Safepoint "ShenandoahFinalUpdateRefs", Time since last: 917100 ns, Reaching safepoint: 12900 ns, Cleanup: 66500 ns, At safepoint: 96400 ns, Leaving safepoint: 4400 ns, Total: 180200 ns
+[2026-11-01T15:24:58.226+0300][0.287s][info][gc,start         ] GC(0) Concurrent cleanup
+[2026-11-01T15:24:58.226+0300][0.287s][info][gc               ] GC(0) Concurrent cleanup 14M->12M(128M) 0.027ms
+[2026-11-01T15:24:58.226+0300][0.287s][info][gc,ergo          ] Free: 108M, Max: 256K regular, 98560K humongous, Frag: 11% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.226+0300][0.289s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.226+0300][0.289s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc               ] Trigger: Learning 2 of 5. Free (74823K) is below initial threshold (91750K)
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc,ergo          ] Free: 74823K, Max: 256K regular, 74496K humongous, Frag: 0% external, 0% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc,start         ] GC(1) Concurrent reset
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc,ergo          ] GC(1) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc               ] GC(1) Concurrent reset 0.224ms
+[2026-11-01T15:24:58.252+0300][0.312s][info][safepoint,cleanup] updating inline caches, 0.0000007 secs
+[2026-11-01T15:24:58.252+0300][0.312s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000664 secs
+[2026-11-01T15:24:58.252+0300][0.312s][info][gc,start         ] GC(1) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,task          ] GC(1) Using 4 of 8 workers for init marking
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,ergo          ] GC(1) Pacer for Mark. Expected Live: 6871K, Free: 74823K, Non-Taxable: 7482K, Alloc Tax Rate: 0.1x
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc               ] GC(1) Pause Init Mark (unload classes) 0.074ms
+[2026-11-01T15:24:58.252+0300][0.313s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 25790700 ns, Reaching safepoint: 9200 ns, Cleanup: 90000 ns, At safepoint: 101400 ns, Leaving safepoint: 700 ns, Total: 201300 ns
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,start         ] GC(1) Concurrent marking roots
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc               ] GC(1) Concurrent marking roots 0.171ms
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,start         ] GC(1) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.252+0300][0.313s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.253+0300][0.314s][info][gc               ] GC(1) Concurrent marking (unload classes) 0.796ms
+[2026-11-01T15:24:58.253+0300][0.314s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.253+0300][0.314s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000217 secs
+[2026-11-01T15:24:58.253+0300][0.314s][info][gc,start         ] GC(1) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.253+0300][0.314s][info][gc,task          ] GC(1) Using 4 of 8 workers for final marking
+[2026-11-01T15:24:58.253+0300][0.314s][info][gc,ergo          ] GC(1) Collectable Garbage: 30661K (93%), Immediate: 30661K (93%), CSet: 0B (0%)
+[2026-11-01T15:24:58.253+0300][0.314s][info][gc               ] GC(1) Pause Final Mark (unload classes) 0.123ms
+[2026-11-01T15:24:58.254+0300][0.314s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1117400 ns, Reaching safepoint: 2300 ns, Cleanup: 35900 ns, At safepoint: 188000 ns, Leaving safepoint: 700 ns, Total: 226900 ns
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,start         ] GC(1) Concurrent weak references
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,ref           ] GC(1) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,ref           ] GC(1) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,ref           ] GC(1) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc               ] GC(1) Concurrent weak references 0.177ms
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,start         ] GC(1) Concurrent weak roots
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc               ] GC(1) Concurrent weak roots 0.199ms
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,start         ] GC(1) Concurrent cleanup
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc               ] GC(1) Concurrent cleanup 44M->14M(128M) 0.031ms
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,ergo          ] GC(1) Free: 105M, Max: 256K regular, 75520K humongous, Frag: 30% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.254+0300][0.314s][info][gc,start         ] GC(1) Concurrent class unloading
+[2026-11-01T15:24:58.254+0300][0.315s][info][gc,task          ] GC(1) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.254+0300][0.315s][info][gc               ] GC(1) Concurrent class unloading 0.248ms
+[2026-11-01T15:24:58.254+0300][0.315s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.254+0300][0.315s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000357 secs
+[2026-11-01T15:24:58.254+0300][0.315s][info][gc,start         ] GC(1) Pause Final Roots
+[2026-11-01T15:24:58.254+0300][0.315s][info][gc               ] GC(1) Pause Final Roots 0.016ms
+[2026-11-01T15:24:58.254+0300][0.315s][info][safepoint        ] Safepoint "ShenandoahFinalRoots", Time since last: 842800 ns, Reaching safepoint: 1300 ns, Cleanup: 51800 ns, At safepoint: 32300 ns, Leaving safepoint: 400 ns, Total: 85800 ns
+[2026-11-01T15:24:58.254+0300][0.315s][info][gc,ergo          ] Free: 105M, Max: 256K regular, 75520K humongous, Frag: 30% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.254+0300][0.316s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.254+0300][0.316s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc               ] Trigger: Learning 3 of 5. Free (87701K) is below initial threshold (91750K)
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc,ergo          ] Free: 87701K, Max: 256K regular, 75520K humongous, Frag: 14% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc,start         ] GC(2) Concurrent reset
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc,ergo          ] GC(2) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.328+0300][0.388s][info][gc               ] GC(2) Concurrent reset 0.260ms
+[2026-11-01T15:24:58.328+0300][0.389s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.328+0300][0.389s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000430 secs
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,start         ] GC(2) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,task          ] GC(2) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,ergo          ] GC(2) Pacer for Mark. Expected Live: 10068K, Free: 84373K, Non-Taxable: 8437K, Alloc Tax Rate: 0.1x
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc               ] GC(2) Pause Init Mark (unload classes) 0.091ms
+[2026-11-01T15:24:58.328+0300][0.389s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 73472000 ns, Reaching safepoint: 228400 ns, Cleanup: 67800 ns, At safepoint: 120800 ns, Leaving safepoint: 3500 ns, Total: 420500 ns
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,start         ] GC(2) Concurrent marking roots
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc               ] GC(2) Concurrent marking roots 0.198ms
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,start         ] GC(2) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.328+0300][0.389s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc               ] GC(2) Concurrent marking (unload classes) 0.978ms
+[2026-11-01T15:24:58.328+0300][0.390s][info][safepoint,cleanup] updating inline caches, 0.0000002 secs
+[2026-11-01T15:24:58.328+0300][0.390s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000593 secs
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,start         ] GC(2) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,task          ] GC(2) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,ergo          ] GC(2) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 98924K, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,ergo          ] GC(2) Collectable Garbage: 17593K (99%), Immediate: 14700K (83%), CSet: 2893K (16%)
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,ergo          ] GC(2) Pacer for Evacuation. Used CSet: 3431K, Free: 94017K, Non-Taxable: 9401K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc               ] GC(2) Pause Final Mark (unload classes) 0.188ms
+[2026-11-01T15:24:58.328+0300][0.390s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1359800 ns, Reaching safepoint: 4200 ns, Cleanup: 76700 ns, At safepoint: 206400 ns, Leaving safepoint: 6500 ns, Total: 293800 ns
+[2026-11-01T15:24:58.328+0300][0.390s][info][gc,start         ] GC(2) Concurrent thread roots
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,task          ] GC(2) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc               ] GC(2) Concurrent thread roots 0.215ms
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,start         ] GC(2) Concurrent weak references
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,ref           ] GC(2) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,ref           ] GC(2) Discovered  references: Soft: 0, Weak: 0, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,ref           ] GC(2) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc               ] GC(2) Concurrent weak references 0.126ms
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,start         ] GC(2) Concurrent weak roots
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc               ] GC(2) Concurrent weak roots 0.368ms
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,start         ] GC(2) Concurrent cleanup
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc               ] GC(2) Concurrent cleanup 45M->31M(128M) 0.023ms
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,ergo          ] GC(2) Free: 89953K, Max: 256K regular, 72192K humongous, Frag: 20% external, 0% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,start         ] GC(2) Concurrent class unloading
+[2026-11-01T15:24:58.328+0300][0.391s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc               ] GC(2) Concurrent class unloading 0.497ms
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,start         ] GC(2) Concurrent strong roots
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc               ] GC(2) Concurrent strong roots 0.079ms
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,start         ] GC(2) Concurrent evacuation
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc               ] GC(2) Concurrent evacuation 0.278ms
+[2026-11-01T15:24:58.328+0300][0.392s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.328+0300][0.392s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000222 secs
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,start         ] GC(2) Pause Init Update Refs
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,ergo          ] GC(2) Pacer for Update Refs. Used: 37637K, Free: 84638K, Non-Taxable: 8463K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc               ] GC(2) Pause Init Update Refs 0.033ms
+[2026-11-01T15:24:58.328+0300][0.392s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 1875000 ns, Reaching safepoint: 2200 ns, Cleanup: 35900 ns, At safepoint: 48700 ns, Leaving safepoint: 400 ns, Total: 87200 ns
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,start         ] GC(2) Concurrent update references
+[2026-11-01T15:24:58.328+0300][0.392s][info][gc,task          ] GC(2) Using 3 of 8 workers for concurrent reference update
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc               ] GC(2) Concurrent update references 0.485ms
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc,start         ] GC(2) Concurrent update thread roots
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc               ] GC(2) Concurrent update thread roots 0.101ms
+[2026-11-01T15:24:58.328+0300][0.393s][info][safepoint,cleanup] updating inline caches, 0.0000003 secs
+[2026-11-01T15:24:58.328+0300][0.393s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000337 secs
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc,start         ] GC(2) Pause Final Update Refs
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc,task          ] GC(2) Using 4 of 8 workers for final reference update
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc               ] GC(2) Pause Final Update Refs 0.040ms
+[2026-11-01T15:24:58.328+0300][0.393s][info][safepoint        ] Safepoint "ShenandoahFinalUpdateRefs", Time since last: 675100 ns, Reaching safepoint: 1300 ns, Cleanup: 49000 ns, At safepoint: 56200 ns, Leaving safepoint: 300 ns, Total: 106800 ns
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc,start         ] GC(2) Concurrent cleanup
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc               ] GC(2) Concurrent cleanup 36M->33M(128M) 0.019ms
+[2026-11-01T15:24:58.328+0300][0.393s][info][gc,ergo          ] Free: 87905K, Max: 256K regular, 71424K humongous, Frag: 18% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.328+0300][0.394s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.328+0300][0.394s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.344+0300][0.403s][info][gc               ] Trigger: Learning 4 of 5. Free (87905K) is below initial threshold (91750K)
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,ergo          ] Free: 87624K, Max: 256K regular, 71424K humongous, Frag: 18% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,start         ] GC(3) Concurrent reset
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,ergo          ] GC(3) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc               ] GC(3) Concurrent reset 0.309ms
+[2026-11-01T15:24:58.344+0300][0.404s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.344+0300][0.404s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000300 secs
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,start         ] GC(3) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,task          ] GC(3) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,ergo          ] GC(3) Pacer for Mark. Expected Live: 13228K, Free: 82971K, Non-Taxable: 8297K, Alloc Tax Rate: 0.2x
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc               ] GC(3) Pause Init Mark (unload classes) 0.057ms
+[2026-11-01T15:24:58.344+0300][0.404s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 10806000 ns, Reaching safepoint: 29300 ns, Cleanup: 46000 ns, At safepoint: 75400 ns, Leaving safepoint: 4500 ns, Total: 155200 ns
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,start         ] GC(3) Concurrent marking roots
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc               ] GC(3) Concurrent marking roots 0.151ms
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,start         ] GC(3) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.344+0300][0.404s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.344+0300][0.405s][info][gc               ] GC(3) Concurrent marking (unload classes) 0.861ms
+[2026-11-01T15:24:58.344+0300][0.405s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.344+0300][0.405s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000467 secs
+[2026-11-01T15:24:58.344+0300][0.405s][info][gc,start         ] GC(3) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.344+0300][0.405s][info][gc,task          ] GC(3) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.344+0300][0.405s][info][gc,ergo          ] GC(3) Collectable Garbage: 14904K (93%), Immediate: 14904K (93%), CSet: 0B (0%)
+[2026-11-01T15:24:58.344+0300][0.405s][info][gc               ] GC(3) Pause Final Mark (unload classes) 0.110ms
+[2026-11-01T15:24:58.344+0300][0.405s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1165700 ns, Reaching safepoint: 1400 ns, Cleanup: 67200 ns, At safepoint: 127400 ns, Leaving safepoint: 700 ns, Total: 196700 ns
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,start         ] GC(3) Concurrent weak references
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,ref           ] GC(3) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,ref           ] GC(3) Discovered  references: Soft: 0, Weak: 0, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,ref           ] GC(3) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc               ] GC(3) Concurrent weak references 0.141ms
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,start         ] GC(3) Concurrent weak roots
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc               ] GC(3) Concurrent weak roots 0.184ms
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,start         ] GC(3) Concurrent cleanup
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc               ] GC(3) Concurrent cleanup 43M->28M(128M) 0.022ms
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,ergo          ] GC(3) Free: 92889K, Max: 256K regular, 76288K humongous, Frag: 18% external, 4% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,start         ] GC(3) Concurrent class unloading
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,task          ] GC(3) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc               ] GC(3) Concurrent class unloading 0.208ms
+[2026-11-01T15:24:58.344+0300][0.406s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.344+0300][0.406s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000183 secs
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,start         ] GC(3) Pause Final Roots
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc               ] GC(3) Pause Final Roots 0.014ms
+[2026-11-01T15:24:58.344+0300][0.406s][info][safepoint        ] Safepoint "ShenandoahFinalRoots", Time since last: 716400 ns, Reaching safepoint: 1500 ns, Cleanup: 31200 ns, At safepoint: 29000 ns, Leaving safepoint: 400 ns, Total: 62100 ns
+[2026-11-01T15:24:58.344+0300][0.406s][info][gc,ergo          ] Free: 92889K, Max: 256K regular, 76288K humongous, Frag: 18% external, 4% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.344+0300][0.407s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.344+0300][0.407s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.376+0300][0.435s][info][gc               ] Trigger: Learning 5 of 5. Free (77123K) is below initial threshold (91750K)
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,ergo          ] Free: 73795K, Max: 256K regular, 69632K humongous, Frag: 5% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,start         ] GC(4) Concurrent reset
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,ergo          ] GC(4) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc               ] GC(4) Concurrent reset 0.419ms
+[2026-11-01T15:24:58.376+0300][0.436s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.376+0300][0.436s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000527 secs
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,start         ] GC(4) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,task          ] GC(4) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc,ergo          ] GC(4) Pacer for Mark. Expected Live: 15603K, Free: 73153K, Non-Taxable: 7315K, Alloc Tax Rate: 0.3x
+[2026-11-01T15:24:58.376+0300][0.436s][info][gc               ] GC(4) Pause Init Mark (unload classes) 0.087ms
+[2026-11-01T15:24:58.376+0300][0.437s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 30026000 ns, Reaching safepoint: 13600 ns, Cleanup: 77100 ns, At safepoint: 114800 ns, Leaving safepoint: 4500 ns, Total: 210000 ns
+[2026-11-01T15:24:58.376+0300][0.437s][info][gc,start         ] GC(4) Concurrent marking roots
+[2026-11-01T15:24:58.376+0300][0.437s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.376+0300][0.437s][info][gc               ] GC(4) Concurrent marking roots 0.178ms
+[2026-11-01T15:24:58.376+0300][0.437s][info][gc,start         ] GC(4) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.376+0300][0.437s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.378+0300][0.439s][info][gc               ] GC(4) Concurrent marking (unload classes) 2.469ms
+[2026-11-01T15:24:58.378+0300][0.439s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.378+0300][0.439s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000234 secs
+[2026-11-01T15:24:58.378+0300][0.439s][info][gc,start         ] GC(4) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.378+0300][0.439s][info][gc,task          ] GC(4) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ergo          ] GC(4) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 88743K, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ergo          ] GC(4) Collectable Garbage: 21485K (99%), Immediate: 19367K (89%), CSet: 2118K (9%)
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ergo          ] GC(4) Pacer for Evacuation. Used CSet: 2549K, Free: 84371K, Non-Taxable: 8437K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc               ] GC(4) Pause Final Mark (unload classes) 0.174ms
+[2026-11-01T15:24:58.378+0300][0.440s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 2870100 ns, Reaching safepoint: 12700 ns, Cleanup: 40600 ns, At safepoint: 193900 ns, Leaving safepoint: 4200 ns, Total: 251400 ns
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,start         ] GC(4) Concurrent thread roots
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,task          ] GC(4) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc               ] GC(4) Concurrent thread roots 0.089ms
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,start         ] GC(4) Concurrent weak references
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ref           ] GC(4) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ref           ] GC(4) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ref           ] GC(4) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc               ] GC(4) Concurrent weak references 0.130ms
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,start         ] GC(4) Concurrent weak roots
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc               ] GC(4) Concurrent weak roots 0.214ms
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,start         ] GC(4) Concurrent cleanup
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc               ] GC(4) Concurrent cleanup 59M->40M(128M) 0.021ms
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,ergo          ] GC(4) Free: 79586K, Max: 256K regular, 58368K humongous, Frag: 27% external, 0% internal; Reserve: 6653K, Max: 256K
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,start         ] GC(4) Concurrent class unloading
+[2026-11-01T15:24:58.378+0300][0.440s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc               ] GC(4) Concurrent class unloading 0.863ms
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc,start         ] GC(4) Concurrent strong roots
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc               ] GC(4) Concurrent strong roots 0.083ms
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc,start         ] GC(4) Concurrent evacuation
+[2026-11-01T15:24:58.378+0300][0.441s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc               ] GC(4) Concurrent evacuation 0.366ms
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000185 secs
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,start         ] GC(4) Pause Init Update Refs
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,ergo          ] GC(4) Pacer for Update Refs. Used: 44001K, Free: 77544K, Non-Taxable: 7754K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc               ] GC(4) Pause Init Update Refs 0.033ms
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 2021000 ns, Reaching safepoint: 1900 ns, Cleanup: 32500 ns, At safepoint: 48400 ns, Leaving safepoint: 400 ns, Total: 83200 ns
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,start         ] GC(4) Concurrent update references
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,task          ] GC(4) Using 3 of 8 workers for concurrent reference update
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc               ] GC(4) Concurrent update references 0.494ms
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,start         ] GC(4) Concurrent update thread roots
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc               ] GC(4) Concurrent update thread roots 0.091ms
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000185 secs
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,start         ] GC(4) Pause Final Update Refs
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc,task          ] GC(4) Using 3 of 8 workers for final reference update
+[2026-11-01T15:24:58.378+0300][0.442s][info][gc               ] GC(4) Pause Final Update Refs 0.040ms
+[2026-11-01T15:24:58.378+0300][0.442s][info][safepoint        ] Safepoint "ShenandoahFinalUpdateRefs", Time since last: 674100 ns, Reaching safepoint: 600 ns, Cleanup: 31200 ns, At safepoint: 54700 ns, Leaving safepoint: 400 ns, Total: 86900 ns
+[2026-11-01T15:24:58.378+0300][0.443s][info][gc,start         ] GC(4) Concurrent cleanup
+[2026-11-01T15:24:58.378+0300][0.443s][info][gc               ] GC(4) Concurrent cleanup 42M->40M(128M) 0.036ms
+[2026-11-01T15:24:58.378+0300][0.443s][info][gc,ergo          ] Free: 80148K, Max: 256K regular, 58112K humongous, Frag: 27% external, 6% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.378+0300][0.444s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.378+0300][0.444s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.439+0300][0.498s][info][gc               ] Trigger: Free (4402K) is below minimum threshold (13107K)
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,ergo          ] Free: 4402K, Max: 256K regular, 3840K humongous, Frag: 0% external, 14% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,start         ] GC(5) Concurrent reset
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,ergo          ] GC(5) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc               ] GC(5) Concurrent reset 0.403ms
+[2026-11-01T15:24:58.439+0300][0.499s][info][safepoint,cleanup] updating inline caches, 0.0000005 secs
+[2026-11-01T15:24:58.439+0300][0.499s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000816 secs
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,start         ] GC(5) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.439+0300][0.499s][info][gc,task          ] GC(5) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc,ergo          ] GC(5) Pacer for Mark. Expected Live: 17665K, Free: 4402K, Non-Taxable: 440K, Alloc Tax Rate: 4.9x
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc               ] GC(5) Pause Init Mark (unload classes) 0.234ms
+[2026-11-01T15:24:58.439+0300][0.500s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 56809500 ns, Reaching safepoint: 9200 ns, Cleanup: 123400 ns, At safepoint: 254800 ns, Leaving safepoint: 900 ns, Total: 388300 ns
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc,start         ] GC(5) Concurrent marking roots
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc               ] GC(5) Concurrent marking roots 0.195ms
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc,start         ] GC(5) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.439+0300][0.500s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc               ] GC(5) Concurrent marking (unload classes) 0.873ms
+[2026-11-01T15:24:58.439+0300][0.501s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.439+0300][0.501s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000246 secs
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,start         ] GC(5) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,task          ] GC(5) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,ergo          ] GC(5) Collectable Garbage: 67671K (93%), Immediate: 67671K (93%), CSet: 0B (0%)
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc               ] GC(5) Pause Final Mark (unload classes) 0.125ms
+[2026-11-01T15:24:58.439+0300][0.501s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1204600 ns, Reaching safepoint: 1800 ns, Cleanup: 38900 ns, At safepoint: 140900 ns, Leaving safepoint: 500 ns, Total: 182100 ns
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,start         ] GC(5) Concurrent weak references
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,ref           ] GC(5) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,ref           ] GC(5) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,ref           ] GC(5) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc               ] GC(5) Concurrent weak references 0.158ms
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,start         ] GC(5) Concurrent weak roots
+[2026-11-01T15:24:58.439+0300][0.501s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc               ] GC(5) Concurrent weak roots 0.218ms
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,start         ] GC(5) Concurrent cleanup
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc               ] GC(5) Concurrent cleanup 108M->42M(128M) 0.035ms
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,ergo          ] GC(5) Free: 77926K, Max: 256K regular, 6656K humongous, Frag: 92% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,start         ] GC(5) Concurrent class unloading
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,task          ] GC(5) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc               ] GC(5) Concurrent class unloading 0.300ms
+[2026-11-01T15:24:58.439+0300][0.502s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.439+0300][0.502s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000204 secs
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,start         ] GC(5) Pause Final Roots
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc               ] GC(5) Pause Final Roots 0.015ms
+[2026-11-01T15:24:58.439+0300][0.502s][info][safepoint        ] Safepoint "ShenandoahFinalRoots", Time since last: 899500 ns, Reaching safepoint: 1600 ns, Cleanup: 34400 ns, At safepoint: 30200 ns, Leaving safepoint: 400 ns, Total: 66600 ns
+[2026-11-01T15:24:58.439+0300][0.502s][info][gc,ergo          ] Free: 77926K, Max: 256K regular, 6656K humongous, Frag: 92% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.439+0300][0.503s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.439+0300][0.503s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc               ] Trigger: Free (11953K) is below minimum threshold (13107K)
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc,ergo          ] Free: 8625K, Max: 256K regular, 4864K humongous, Frag: 41% external, 15% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc,start         ] GC(6) Concurrent reset
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc,ergo          ] GC(6) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.644+0300][0.704s][info][gc               ] GC(6) Concurrent reset 0.531ms
+[2026-11-01T15:24:58.644+0300][0.705s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.644+0300][0.705s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000378 secs
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc,start         ] GC(6) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc,task          ] GC(6) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc,ergo          ] GC(6) Pacer for Mark. Expected Live: 24045K, Free: 3851K, Non-Taxable: 385K, Alloc Tax Rate: 7.6x
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc               ] GC(6) Pause Init Mark (unload classes) 0.070ms
+[2026-11-01T15:24:58.644+0300][0.705s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 202563600 ns, Reaching safepoint: 556000 ns, Cleanup: 150600 ns, At safepoint: 90100 ns, Leaving safepoint: 6300 ns, Total: 803000 ns
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc,start         ] GC(6) Concurrent marking roots
+[2026-11-01T15:24:58.644+0300][0.705s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.644+0300][0.706s][info][gc               ] GC(6) Concurrent marking roots 0.131ms
+[2026-11-01T15:24:58.644+0300][0.706s][info][gc,start         ] GC(6) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.644+0300][0.706s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.644+0300][0.706s][info][gc               ] GC(6) Concurrent marking (unload classes) 0.844ms
+[2026-11-01T15:24:58.644+0300][0.707s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.644+0300][0.707s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000381 secs
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,start         ] GC(6) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,task          ] GC(6) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ergo          ] GC(6) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 59410K, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ergo          ] GC(6) Collectable Garbage: 57182K (99%), Immediate: 49682K (86%), CSet: 7499K (13%)
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ergo          ] GC(6) Pacer for Evacuation. Used CSet: 8720K, Free: 57073K, Non-Taxable: 5707K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc               ] GC(6) Pause Final Mark (unload classes) 0.198ms
+[2026-11-01T15:24:58.644+0300][0.707s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1124800 ns, Reaching safepoint: 1900 ns, Cleanup: 53800 ns, At safepoint: 223200 ns, Leaving safepoint: 800 ns, Total: 279700 ns
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,start         ] GC(6) Concurrent thread roots
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,task          ] GC(6) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc               ] GC(6) Concurrent thread roots 0.099ms
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,start         ] GC(6) Concurrent weak references
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ref           ] GC(6) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ref           ] GC(6) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,ref           ] GC(6) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc               ] GC(6) Concurrent weak references 0.182ms
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,start         ] GC(6) Concurrent weak roots
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.644+0300][0.707s][info][gc               ] GC(6) Concurrent weak roots 0.231ms
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,start         ] GC(6) Concurrent cleanup
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc               ] GC(6) Concurrent cleanup 109M->61M(128M) 0.037ms
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,ergo          ] GC(6) Free: 57073K, Max: 256K regular, 6656K humongous, Frag: 89% external, 1% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,start         ] GC(6) Concurrent class unloading
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc               ] GC(6) Concurrent class unloading 0.285ms
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,start         ] GC(6) Concurrent strong roots
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc               ] GC(6) Concurrent strong roots 0.086ms
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,start         ] GC(6) Concurrent evacuation
+[2026-11-01T15:24:58.644+0300][0.708s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc               ] GC(6) Concurrent evacuation 0.540ms
+[2026-11-01T15:24:58.644+0300][0.709s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.644+0300][0.709s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000427 secs
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc,start         ] GC(6) Pause Init Update Refs
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc,ergo          ] GC(6) Pacer for Update Refs. Used: 64263K, Free: 57073K, Non-Taxable: 5707K, Alloc Tax Rate: 1.4x
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc               ] GC(6) Pause Init Update Refs 0.046ms
+[2026-11-01T15:24:58.644+0300][0.709s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 1833700 ns, Reaching safepoint: 2200 ns, Cleanup: 63600 ns, At safepoint: 68100 ns, Leaving safepoint: 500 ns, Total: 134400 ns
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc,start         ] GC(6) Concurrent update references
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc,task          ] GC(6) Using 3 of 8 workers for concurrent reference update
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc               ] GC(6) Concurrent update references 0.500ms
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc,start         ] GC(6) Concurrent update thread roots
+[2026-11-01T15:24:58.644+0300][0.709s][info][gc               ] GC(6) Concurrent update thread roots 0.122ms
+[2026-11-01T15:24:58.644+0300][0.710s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.644+0300][0.710s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000422 secs
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc,start         ] GC(6) Pause Final Update Refs
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc,task          ] GC(6) Using 3 of 8 workers for final reference update
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc               ] GC(6) Pause Final Update Refs 0.059ms
+[2026-11-01T15:24:58.644+0300][0.710s][info][safepoint        ] Safepoint "ShenandoahFinalUpdateRefs", Time since last: 750800 ns, Reaching safepoint: 1800 ns, Cleanup: 62800 ns, At safepoint: 82000 ns, Leaving safepoint: 600 ns, Total: 147200 ns
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc,start         ] GC(6) Concurrent cleanup
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc               ] GC(6) Concurrent cleanup 62M->54M(128M) 0.024ms
+[2026-11-01T15:24:58.644+0300][0.710s][info][gc,ergo          ] Free: 64521K, Max: 256K regular, 15360K humongous, Frag: 77% external, 2% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.644+0300][0.711s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.644+0300][0.711s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:58.739+0300][0.799s][info][gc               ] Trigger: Free (8322K) is below minimum threshold (13107K)
+[2026-11-01T15:24:58.739+0300][0.799s][info][gc,ergo          ] Free: 8322K, Max: 256K regular, 5376K humongous, Frag: 33% external, 16% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.739+0300][0.799s][info][gc,start         ] GC(7) Concurrent reset
+[2026-11-01T15:24:58.739+0300][0.799s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:58.739+0300][0.799s][info][gc,ergo          ] GC(7) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc               ] GC(7) Concurrent reset 0.514ms
+[2026-11-01T15:24:58.739+0300][0.800s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:58.739+0300][0.800s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000320 secs
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,start         ] GC(7) Pause Init Mark (unload classes)
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,task          ] GC(7) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,ergo          ] GC(7) Pacer for Mark. Expected Live: 32292K, Free: 8322K, Non-Taxable: 832K, Alloc Tax Rate: 4.7x
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc               ] GC(7) Pause Init Mark (unload classes) 0.059ms
+[2026-11-01T15:24:58.739+0300][0.800s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 89952600 ns, Reaching safepoint: 7300 ns, Cleanup: 47800 ns, At safepoint: 78000 ns, Leaving safepoint: 600 ns, Total: 133700 ns
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,start         ] GC(7) Concurrent marking roots
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc               ] GC(7) Concurrent marking roots 0.603ms
+[2026-11-01T15:24:58.739+0300][0.800s][info][gc,start         ] GC(7) Concurrent marking (unload classes)
+[2026-11-01T15:24:58.741+0300][0.800s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:58.741+0300][0.801s][info][gc               ] GC(7) Concurrent marking (unload classes) 0.855ms
+[2026-11-01T15:24:58.741+0300][0.801s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.741+0300][0.801s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000357 secs
+[2026-11-01T15:24:58.741+0300][0.801s][info][gc,start         ] GC(7) Pause Final Mark (unload classes)
+[2026-11-01T15:24:58.741+0300][0.801s][info][gc,task          ] GC(7) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:58.742+0300][0.801s][info][gc,ergo          ] GC(7) Collectable Garbage: 43973K (94%), Immediate: 43973K (94%), CSet: 0B (0%)
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc               ] GC(7) Pause Final Mark (unload classes) 0.135ms
+[2026-11-01T15:24:58.742+0300][0.802s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1586100 ns, Reaching safepoint: 1200 ns, Cleanup: 51800 ns, At safepoint: 163800 ns, Leaving safepoint: 800 ns, Total: 217600 ns
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,start         ] GC(7) Concurrent weak references
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,ref           ] GC(7) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,ref           ] GC(7) Discovered  references: Soft: 0, Weak: 0, Final: 0, Phantom: 1
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,ref           ] GC(7) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc               ] GC(7) Concurrent weak references 0.189ms
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,start         ] GC(7) Concurrent weak roots
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc               ] GC(7) Concurrent weak roots 0.195ms
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,start         ] GC(7) Concurrent cleanup
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc               ] GC(7) Concurrent cleanup 105M->62M(128M) 0.035ms
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,ergo          ] GC(7) Free: 55928K, Max: 256K regular, 7168K humongous, Frag: 88% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,start         ] GC(7) Concurrent class unloading
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc,task          ] GC(7) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:58.742+0300][0.802s][info][gc               ] GC(7) Concurrent class unloading 0.288ms
+[2026-11-01T15:24:58.742+0300][0.803s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:58.742+0300][0.803s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000424 secs
+[2026-11-01T15:24:58.742+0300][0.803s][info][gc,start         ] GC(7) Pause Final Roots
+[2026-11-01T15:24:58.742+0300][0.803s][info][gc               ] GC(7) Pause Final Roots 0.017ms
+[2026-11-01T15:24:58.742+0300][0.803s][info][safepoint        ] Safepoint "ShenandoahFinalRoots", Time since last: 948900 ns, Reaching safepoint: 1700 ns, Cleanup: 65000 ns, At safepoint: 40500 ns, Leaving safepoint: 500 ns, Total: 107700 ns
+[2026-11-01T15:24:58.742+0300][0.803s][info][gc,ergo          ] Free: 55928K, Max: 256K regular, 7168K humongous, Frag: 88% external, 5% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:58.743+0300][0.804s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:58.743+0300][0.804s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:59.030+0300][1.090s][info][gc               ] Trigger: Free (11282K) is below minimum threshold (13107K)
+[2026-11-01T15:24:59.030+0300][1.090s][info][gc,ergo          ] Free: 11282K, Max: 256K regular, 5376K humongous, Frag: 52% external, 11% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.030+0300][1.090s][info][gc,start         ] GC(8) Concurrent reset
+[2026-11-01T15:24:59.030+0300][1.090s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:59.030+0300][1.090s][info][gc,ergo          ] GC(8) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc               ] GC(8) Concurrent reset 0.392ms
+[2026-11-01T15:24:59.030+0300][1.091s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:59.030+0300][1.091s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000270 secs
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,start         ] GC(8) Pause Init Mark (unload classes)
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,task          ] GC(8) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,ergo          ] GC(8) Pacer for Mark. Expected Live: 40582K, Free: 11228K, Non-Taxable: 1122K, Alloc Tax Rate: 4.4x
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc               ] GC(8) Pause Init Mark (unload classes) 0.056ms
+[2026-11-01T15:24:59.030+0300][1.091s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 288116500 ns, Reaching safepoint: 6300 ns, Cleanup: 42400 ns, At safepoint: 76000 ns, Leaving safepoint: 600 ns, Total: 125300 ns
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,start         ] GC(8) Concurrent marking roots
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc               ] GC(8) Concurrent marking roots 0.191ms
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,start         ] GC(8) Concurrent marking (unload classes)
+[2026-11-01T15:24:59.030+0300][1.091s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc               ] GC(8) Concurrent marking (unload classes) 0.853ms
+[2026-11-01T15:24:59.030+0300][1.092s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:59.030+0300][1.092s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000390 secs
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,start         ] GC(8) Pause Final Mark (unload classes)
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,task          ] GC(8) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,ergo          ] GC(8) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 50383K, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,ergo          ] GC(8) Collectable Garbage: 37312K (99%), Immediate: 32975K (87%), CSet: 4336K (11%)
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,ergo          ] GC(8) Pacer for Evacuation. Used CSet: 5133K, Free: 46841K, Non-Taxable: 4684K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc               ] GC(8) Pause Final Mark (unload classes) 0.173ms
+[2026-11-01T15:24:59.030+0300][1.092s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1204000 ns, Reaching safepoint: 2000 ns, Cleanup: 55300 ns, At safepoint: 195200 ns, Leaving safepoint: 600 ns, Total: 253100 ns
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,start         ] GC(8) Concurrent thread roots
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,task          ] GC(8) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc               ] GC(8) Concurrent thread roots 0.101ms
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,start         ] GC(8) Concurrent weak references
+[2026-11-01T15:24:59.030+0300][1.092s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,ref           ] GC(8) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,ref           ] GC(8) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,ref           ] GC(8) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent weak references 0.104ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,start         ] GC(8) Concurrent weak roots
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent weak roots 0.221ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,start         ] GC(8) Concurrent cleanup
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent cleanup 102M->70M(128M) 0.023ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,ergo          ] GC(8) Free: 46841K, Max: 256K regular, 6144K humongous, Frag: 87% external, 2% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,start         ] GC(8) Concurrent class unloading
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent class unloading 0.213ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,start         ] GC(8) Concurrent strong roots
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent strong roots 0.050ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,start         ] GC(8) Concurrent evacuation
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:59.030+0300][1.093s][info][gc               ] GC(8) Concurrent evacuation 0.265ms
+[2026-11-01T15:24:59.030+0300][1.093s][info][safepoint,cleanup] updating inline caches, 0.0000002 secs
+[2026-11-01T15:24:59.030+0300][1.094s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000172 secs
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,start         ] GC(8) Pause Init Update Refs
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,ergo          ] GC(8) Pacer for Update Refs. Used: 72943K, Free: 46841K, Non-Taxable: 4684K, Alloc Tax Rate: 1.9x
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc               ] GC(8) Pause Init Update Refs 0.032ms
+[2026-11-01T15:24:59.030+0300][1.094s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 1179700 ns, Reaching safepoint: 1800 ns, Cleanup: 30800 ns, At safepoint: 46700 ns, Leaving safepoint: 400 ns, Total: 79700 ns
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,start         ] GC(8) Concurrent update references
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,task          ] GC(8) Using 3 of 8 workers for concurrent reference update
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc               ] GC(8) Concurrent update references 0.345ms
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,start         ] GC(8) Concurrent update thread roots
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc               ] GC(8) Concurrent update thread roots 0.067ms
+[2026-11-01T15:24:59.030+0300][1.094s][info][safepoint,cleanup] updating inline caches, 0.0000000 secs
+[2026-11-01T15:24:59.030+0300][1.094s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000157 secs
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,start         ] GC(8) Pause Final Update Refs
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,task          ] GC(8) Using 3 of 8 workers for final reference update
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc               ] GC(8) Pause Final Update Refs 0.038ms
+[2026-11-01T15:24:59.030+0300][1.094s][info][safepoint        ] Safepoint "ShenandoahFinalUpdateRefs", Time since last: 526600 ns, Reaching safepoint: 900 ns, Cleanup: 29000 ns, At safepoint: 52800 ns, Leaving safepoint: 200 ns, Total: 82900 ns
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,start         ] GC(8) Concurrent cleanup
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc               ] GC(8) Concurrent cleanup 71M->66M(128M) 0.018ms
+[2026-11-01T15:24:59.030+0300][1.094s][info][gc,ergo          ] Free: 51230K, Max: 256K regular, 6144K humongous, Frag: 88% external, 3% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.030+0300][1.095s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:59.030+0300][1.095s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc               ] Trigger: Free (11333K) is below minimum threshold (13107K)
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,ergo          ] Free: 11297K, Max: 256K regular, 2816K humongous, Frag: 75% external, 15% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,start         ] GC(9) Concurrent reset
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,ergo          ] GC(9) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc               ] GC(9) Concurrent reset 0.343ms
+[2026-11-01T15:24:59.297+0300][1.357s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:59.297+0300][1.357s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000558 secs
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,start         ] GC(9) Pause Init Mark (unload classes)
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,task          ] GC(9) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,ergo          ] GC(9) Pacer for Mark. Expected Live: 49518K, Free: 11297K, Non-Taxable: 1129K, Alloc Tax Rate: 5.4x
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc               ] GC(9) Pause Init Mark (unload classes) 0.057ms
+[2026-11-01T15:24:59.297+0300][1.357s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 262935600 ns, Reaching safepoint: 5600 ns, Cleanup: 71900 ns, At safepoint: 76200 ns, Leaving safepoint: 500 ns, Total: 154200 ns
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,start         ] GC(9) Concurrent marking roots
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc               ] GC(9) Concurrent marking roots 0.126ms
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,start         ] GC(9) Concurrent marking (unload classes)
+[2026-11-01T15:24:59.297+0300][1.357s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc               ] GC(9) Concurrent marking (unload classes) 0.668ms
+[2026-11-01T15:24:59.297+0300][1.358s][info][safepoint,cleanup] updating inline caches, 0.0000002 secs
+[2026-11-01T15:24:59.297+0300][1.358s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000370 secs
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,start         ] GC(9) Pause Final Mark (unload classes)
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,task          ] GC(9) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,ergo          ] GC(9) Collectable Garbage: 28914K (93%), Immediate: 28914K (93%), CSet: 0B (0%)
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc               ] GC(9) Pause Final Mark (unload classes) 0.100ms
+[2026-11-01T15:24:59.297+0300][1.358s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 904100 ns, Reaching safepoint: 1300 ns, Cleanup: 53300 ns, At safepoint: 116200 ns, Leaving safepoint: 500 ns, Total: 171300 ns
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,start         ] GC(9) Concurrent weak references
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,ref           ] GC(9) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,ref           ] GC(9) Discovered  references: Soft: 0, Weak: 1, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc,ref           ] GC(9) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:59.297+0300][1.358s][info][gc               ] GC(9) Concurrent weak references 0.106ms
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,start         ] GC(9) Concurrent weak roots
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc               ] GC(9) Concurrent weak roots 0.156ms
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,start         ] GC(9) Concurrent cleanup
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc               ] GC(9) Concurrent cleanup 102M->74M(128M) 0.022ms
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,ergo          ] GC(9) Free: 42605K, Max: 256K regular, 5376K humongous, Frag: 88% external, 7% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,start         ] GC(9) Concurrent class unloading
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,task          ] GC(9) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc               ] GC(9) Concurrent class unloading 0.201ms
+[2026-11-01T15:24:59.297+0300][1.359s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:59.297+0300][1.359s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000150 secs
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,start         ] GC(9) Pause Final Roots
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc               ] GC(9) Pause Final Roots 0.014ms
+[2026-11-01T15:24:59.297+0300][1.359s][info][safepoint        ] Safepoint "ShenandoahFinalRoots", Time since last: 620800 ns, Reaching safepoint: 900 ns, Cleanup: 28000 ns, At safepoint: 29200 ns, Leaving safepoint: 400 ns, Total: 58500 ns
+[2026-11-01T15:24:59.297+0300][1.359s][info][gc,ergo          ] Free: 42605K, Max: 256K regular, 5376K humongous, Frag: 88% external, 7% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.297+0300][1.360s][info][gc,metaspace     ] Metaspace: 145K(384K)->145K(384K) NonClass: 139K(256K)->139K(256K) Class: 5K(128K)->5K(128K)
+[2026-11-01T15:24:59.297+0300][1.360s][info][gc,ergo          ] Pacer for Idle. Initial: 2621K, Alloc Tax Rate: 1.0x
+[2026-11-01T15:24:59.508+0300][1.568s][info][gc               ] Trigger: Free (12076K) is below minimum threshold (13107K)
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,ergo          ] Free: 12076K, Max: 256K regular, 2816K humongous, Frag: 77% external, 14% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,start         ] GC(10) Concurrent reset
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent reset
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,ergo          ] GC(10) Pacer for Reset. Non-Taxable: 128M
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc               ] GC(10) Concurrent reset 0.516ms
+[2026-11-01T15:24:59.508+0300][1.569s][info][safepoint,cleanup] updating inline caches, 0.0000004 secs
+[2026-11-01T15:24:59.508+0300][1.569s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000357 secs
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,start         ] GC(10) Pause Init Mark (unload classes)
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,task          ] GC(10) Using 3 of 8 workers for init marking
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc,ergo          ] GC(10) Pacer for Mark. Expected Live: 59091K, Free: 11820K, Non-Taxable: 1182K, Alloc Tax Rate: 6.1x
+[2026-11-01T15:24:59.508+0300][1.569s][info][gc               ] GC(10) Pause Init Mark (unload classes) 0.072ms
+[2026-11-01T15:24:59.508+0300][1.569s][info][safepoint        ] Safepoint "ShenandoahInitMark", Time since last: 210255200 ns, Reaching safepoint: 8400 ns, Cleanup: 54200 ns, At safepoint: 95400 ns, Leaving safepoint: 2700 ns, Total: 160700 ns
+[2026-11-01T15:24:59.508+0300][1.570s][info][gc,start         ] GC(10) Concurrent marking roots
+[2026-11-01T15:24:59.508+0300][1.570s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent marking roots
+[2026-11-01T15:24:59.508+0300][1.570s][info][gc               ] GC(10) Concurrent marking roots 0.245ms
+[2026-11-01T15:24:59.508+0300][1.570s][info][gc,start         ] GC(10) Concurrent marking (unload classes)
+[2026-11-01T15:24:59.508+0300][1.570s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent marking
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc               ] GC(10) Concurrent marking (unload classes) 1.049ms
+[2026-11-01T15:24:59.508+0300][1.571s][info][safepoint,cleanup] updating inline caches, 0.0000002 secs
+[2026-11-01T15:24:59.508+0300][1.571s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000341 secs
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,start         ] GC(10) Pause Final Mark (unload classes)
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,task          ] GC(10) Using 3 of 8 workers for final marking
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ergo          ] GC(10) Adaptive CSet Selection. Target Free: 18568K, Actual Free: 40550K, Max CSet: 5461K, Min Garbage: 0B
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ergo          ] GC(10) Collectable Garbage: 27077K (98%), Immediate: 23654K (86%), CSet: 3423K (12%)
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ergo          ] GC(10) Pacer for Evacuation. Used CSet: 3980K, Free: 36226K, Non-Taxable: 3622K, Alloc Tax Rate: 1.1x
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc               ] GC(10) Pause Final Mark (unload classes) 0.150ms
+[2026-11-01T15:24:59.508+0300][1.571s][info][safepoint        ] Safepoint "ShenandoahFinalMarkStartEvac", Time since last: 1479900 ns, Reaching safepoint: 2100 ns, Cleanup: 50300 ns, At safepoint: 172300 ns, Leaving safepoint: 800 ns, Total: 225500 ns
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,start         ] GC(10) Concurrent thread roots
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,task          ] GC(10) Using 3 of 8 workers for Concurrent thread roots
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc               ] GC(10) Concurrent thread roots 0.073ms
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,start         ] GC(10) Concurrent weak references
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent weak references
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ref           ] GC(10) Encountered references: Soft: 3, Weak: 8, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ref           ] GC(10) Discovered  references: Soft: 0, Weak: 0, Final: 0, Phantom: 1
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,ref           ] GC(10) Enqueued    references: Soft: 0, Weak: 0, Final: 0, Phantom: 0
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc               ] GC(10) Concurrent weak references 0.096ms
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,start         ] GC(10) Concurrent weak roots
+[2026-11-01T15:24:59.508+0300][1.571s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent weak root
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Concurrent weak roots 0.167ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Concurrent cleanup
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Concurrent cleanup 103M->80M(128M) 0.022ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,ergo          ] GC(10) Free: 36226K, Max: 256K regular, 5376K humongous, Frag: 85% external, 6% internal; Reserve: 6656K, Max: 256K
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Concurrent class unloading
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent class unloading
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Concurrent class unloading 0.236ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Concurrent strong roots
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent strong root
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Concurrent strong roots 0.062ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Concurrent evacuation
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,task          ] GC(10) Using 3 of 8 workers for concurrent evacuation
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Concurrent evacuation 0.252ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][safepoint,cleanup] updating inline caches, 0.0000001 secs
+[2026-11-01T15:24:59.508+0300][1.572s][info][safepoint,cleanup] safepoint cleanup tasks, 0.0000193 secs
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Pause Init Update Refs
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,ergo          ] GC(10) Pacer for Update Refs. Used: 82659K, Free: 36226K, Non-Taxable: 3622K, Alloc Tax Rate: 2.8x
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc               ] GC(10) Pause Init Update Refs 0.030ms
+[2026-11-01T15:24:59.508+0300][1.572s][info][safepoint        ] Safepoint "ShenandoahInitUpdateRefs", Time since last: 1126700 ns, Reaching safepoint: 1200 ns, Cleanup: 32200 ns, At safepoint: 45100 ns, Leaving safepoint: 400 ns, Total: 78900 ns
+[2026-11-01T15:24:59.508+0300][1.572s][info][gc,start         ] GC(10) Concurrent update references

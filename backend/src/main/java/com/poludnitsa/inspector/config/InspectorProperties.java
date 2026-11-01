@@ -18,6 +18,8 @@ public record InspectorProperties(
         @DefaultValue Inspections inspections,
         @DefaultValue Oql oql,
         @DefaultValue Profiler profiler,
+        @DefaultValue Threads threads,
+        @DefaultValue GcLog gcLog,
         @DefaultValue Web web
 ) {
 
@@ -269,6 +271,58 @@ public record InspectorProperties(
         public Path resolvedWorkDir() {
             return workDir != null ? workDir
                     : Path.of(System.getProperty("java.io.tmpdir"), "jvm-leak-inspector", "profiles");
+        }
+    }
+
+    /**
+     * Thread diagnostics: real-time contention / deadlock sampling and series of thread dumps.
+     *
+     * @param sampleInterval        period of the live contention sampler ({@code dumpAllThreads} without locks)
+     * @param sampleDepth           stack frames per thread in those samples
+     * @param deadlockCheckInterval {@code findDeadlockedThreads}, thread counts and CPU times this often
+     * @param liveIdleTimeout       the live sampler of a target stops when the UI has not asked for this long
+     * @param stuckMinDumps         consecutive dumps with the same stack that make a thread stuck
+     * @param maxStackDepth         frames kept per stack in a series analysis
+     * @param maxSeries             series kept in memory; the oldest finished one is dropped
+     * @param maxClusters           clusters of identical stacks reported per series
+     * @param liveThreads           threads listed in a live snapshot
+     */
+    public record Threads(
+            @DefaultValue("500ms") Duration sampleInterval,
+            @DefaultValue("32") int sampleDepth,
+            @DefaultValue("2s") Duration deadlockCheckInterval,
+            @DefaultValue("2m") Duration liveIdleTimeout,
+            @DefaultValue("3") int stuckMinDumps,
+            @DefaultValue("64") int maxStackDepth,
+            @DefaultValue("10") int maxSeries,
+            @DefaultValue("100") int maxClusters,
+            @DefaultValue("200") int liveThreads
+    ) {
+    }
+
+    /**
+     * GC log analysis (Unified Logging files, JFR files, live JFR recordings of a target).
+     *
+     * @param maxEvents      pauses and safepoints analysed per log; the rest of a longer log is skipped
+     * @param maxPausePoints pauses returned for the scatter plot (the longest are always kept)
+     * @param rateWindows    windows of the allocation / promotion rate chart
+     * @param ttspWarning    time to safepoint from which a safepoint is reported as slow to reach
+     * @param maxAnalyses    analyses kept in memory; the oldest finished one is dropped
+     * @param maxLiveDuration longest live recording accepted
+     * @param workDir        where live recordings are stored while they are parsed
+     */
+    public record GcLog(
+            @DefaultValue("500000") int maxEvents,
+            @DefaultValue("20000") int maxPausePoints,
+            @DefaultValue("200") int rateWindows,
+            @DefaultValue("50ms") Duration ttspWarning,
+            @DefaultValue("10") int maxAnalyses,
+            @DefaultValue("30m") Duration maxLiveDuration,
+            Path workDir
+    ) {
+        public Path resolvedWorkDir() {
+            return workDir != null ? workDir
+                    : Path.of(System.getProperty("java.io.tmpdir"), "jvm-leak-inspector", "gc");
         }
     }
 

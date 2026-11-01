@@ -37,6 +37,7 @@ public final class HtmlReportRenderer {
         html.append("<!doctype html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n")
                 .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
                 .append("<title>").append(esc(bundle.title())).append("</title>\n<style>").append(CSS)
+                .append(DiagnosticsHtmlSections.CSS)
                 .append("</style>\n</head>\n<body>\n");
         header(html, bundle);
         html.append("<main>\n");
@@ -49,6 +50,11 @@ public final class HtmlReportRenderer {
         for (SnapshotDiffDto diff : bundle.diffs()) {
             diff(html, diff);
         }
+        DiagnosticsHtmlSections.oql(html, bundle.oqlQueries());
+        DiagnosticsHtmlSections.profiles(html, bundle.profiles());
+        DiagnosticsHtmlSections.threadsLive(html, bundle.threadsLive());
+        DiagnosticsHtmlSections.threadSeries(html, bundle.threadSeries());
+        DiagnosticsHtmlSections.gc(html, bundle.gcAnalyses());
         html.append("</main>\n<footer>").append(esc(bundle.generator())).append(" · отчёт ")
                 .append(esc(bundle.reportId())).append(" · ").append(esc(time(bundle.generatedAt())))
                 .append("</footer>\n</body>\n</html>\n");
@@ -91,6 +97,19 @@ public final class HtmlReportRenderer {
         card(html, "Информационных", String.valueOf(info), "info");
         card(html, "Под подозрением", Bytes.format(wasted), wasted > 0 ? "warning" : "healthy");
         card(html, "Снапшотов", String.valueOf(bundle.snapshots().size()), "meta");
+        if (!bundle.profiles().isEmpty()) {
+            card(html, "CPU-профилей", String.valueOf(bundle.profiles().size()), "meta");
+        }
+        long deadlocks = bundle.threadSeries().stream().mapToLong(s -> s.deadlocks().size()).sum()
+                + (bundle.threadsLive() == null ? 0 : bundle.threadsLive().deadlocks().size());
+        if (!bundle.threadSeries().isEmpty() || bundle.threadsLive() != null) {
+            card(html, "Deadlock-ов", String.valueOf(deadlocks), deadlocks > 0 ? "critical" : "healthy");
+        }
+        if (!bundle.gcAnalyses().isEmpty()) {
+            double throughput = bundle.gcAnalyses().get(0).kpi().throughputPercent();
+            card(html, "GC throughput", String.format(Locale.ROOT, "%.2f %%", throughput),
+                    throughput < 90 ? "critical" : throughput < 95 ? "warning" : "healthy");
+        }
         html.append("</section>\n");
     }
 

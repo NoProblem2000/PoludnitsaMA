@@ -23,7 +23,17 @@ Client**, работающих на том же bare-metal хосте или VM.
   потоков с выделением интервала мышью, flame graph с зумом и поиском, differential flame graph двух профилей,
   Hotspots с Butterfly (callers / callees) и разбивка времени по подсистемам: бизнес-код, JDBC / PostgreSQL,
   Hibernate, HTTP (Undertow, сервлеты), I/O, блокировки, GC.
-* **Отчёты** — JSON (открывается в этом UI на любом компьютере, офлайн) и автономный HTML.
+* **Threads & Contention** — `ThreadMXBean` цели в реальном времени: deadlock-и (`findDeadlockedThreads`) кольцевым
+  графом «ждёт lock → держит», Monitor Contention Hotspots (класс lock'а и строка кода по blocked time / count,
+  отдельно потоки WildFly / Undertow), CPU потоков. Серия thread dump-ов («📸 Снять серию», например 5 × 2 с) или
+  загрузка jstack-файла: матрица Thread × Dump со значком «=» для неизменного стека, зависшие потоки (один стек в 3+
+  дампах подряд, RUNNABLE или BLOCKED) и кластеры одинаковых стеков.
+* **GC & Safepoints** — gc.log Java 11/17/21 Unified Logging (`-Xlog:gc*,safepoint*`, G1 / Parallel / Serial / ZGC /
+  Shenandoah, можно .gz), .jfr или live-запись GC цели через её `FlightRecorderMXBean`: Throughput %, Max / Avg / P99
+  pause, Allocation и Promotion Rate MB/s, scatter пауз (Young / Mixed / Full / Humongous), heap до и после GC,
+  причины GC с советами (Humongous, Metadata GC Threshold, System.gc(), …), safepoint-ы: TTSP против времени операции.
+* **Отчёты** — JSON (открывается в этом UI на любом компьютере, офлайн) и автономный HTML; в них же CPU-профили,
+  серии дампов, live-контеншн, GC-анализы и история OQL (формат 2, отчёты формата 1 открываются).
 
 Лицензия — [Apache License 2.0](LICENSE); встроенные компоненты перечислены в [NOTICE](NOTICE).
 
@@ -159,6 +169,13 @@ java -Xms256m -Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Dfile.encoding
 | `inspector.profiler.max-profiles` | `8` | профилей в памяти; лишний вытесняет самый старый |
 | `inspector.profiler.max-samples` | `3000000` | сэмплов и событий на профиль, остальное отбрасывается (профиль помечается «обрезан») |
 | `inspector.profiler.async-profiler-path` | — | `asprof` или каталог async-profiler; иначе `ASYNC_PROFILER_HOME`, `/opt/async-profiler`, `PATH` |
+| `inspector.threads.sample-interval` | `500ms` | период live-сэмплера контеншна (`dumpAllThreads` без lock'ов) |
+| `inspector.threads.deadlock-check-interval` | `2s` | `findDeadlockedThreads`, счётчики и CPU потоков |
+| `inspector.threads.live-idle-timeout` | `2m` | live-сэмплер останавливается, когда UI перестал его опрашивать |
+| `inspector.threads.stuck-min-dumps` | `3` | дампов подряд с тем же стеком, после которых поток — зависший |
+| `inspector.gc-log.max-events` | `500000` | пауз и safepoint-ов на лог, остальное пропускается (анализ помечается «обрезан») |
+| `inspector.gc-log.ttsp-warning` | `50ms` | TTSP, с которого safepoint подсвечивается как долгий |
+| `inspector.gc-log.max-live-duration` | `30m` | самая длинная live-запись GC |
 
 ## Безопасная работа в продакшене
 
@@ -175,6 +192,12 @@ java -Xms256m -Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Dfile.encoding
 * **async-profiler** запускается как `asprof -e cpu|wall|alloc -d N -f profile.jfr <pid>`: тот же OS-пользователь, что
   у цели, для `cpu` нужен `kernel.perf_event_paranoid <= 1` (иначе async-profiler откатывается на таймерный режим без стеков ядра), в контейнере —
   `SYS_ADMIN` или `perf_event_open` в seccomp. На Windows недоступен.
+* **Threads & Contention**: live-сэмплер вызывает `dumpAllThreads(false, false, 32)` раз в 500 мс — короткий
+  safepoint (доли миллисекунды – миллисекунды при сотнях потоков). `ThreadContentionMonitoringEnabled` и
+  `ThreadCpuTimeEnabled` включаются, только если были выключены, и возвращаются в исходное состояние, когда сэмплер
+  и серии этого PID закончились. Дамп серии (`dumpAllThreads(true, true)`) — пауза подольше, как у `jstack -l`.
+* **GC live-запись** — JFR-запись в целевой JVM только с событиями GC, heap summary и safepoint (без стеков):
+  оверхед ниже профиля CPU; в файлы и логи цели ничего не пишется.
 * **Force GC** требует подтверждения: на больших кучах это пауза в секунды.
 
 ## Разработка

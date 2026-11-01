@@ -4,7 +4,7 @@ import { History, Loader2, Play, Route, SquareTerminal, Trash2, X } from 'lucide
 import { type KeyboardEvent, type ReactNode, useMemo, useRef, useState } from 'react';
 import { api } from '@/api/endpoints';
 import { errorMessage } from '@/api/http';
-import type { OqlResultDto, OqlValueDto } from '@/api/types';
+import type { OqlHistoryEntryDto, OqlResultDto, OqlValueDto } from '@/api/types';
 import { Badge } from '@/components/common/Badge';
 import { CopyButton } from '@/components/common/CodeBlock';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -185,6 +185,7 @@ function toTsv(result: OqlResultDto): string {
 export function OqlConsoleView() {
   const snapshots = useInspectorStore((s) => s.snapshots);
   const mode = useInspectorStore((s) => s.mode);
+  const offlineQueries = useInspectorStore((s) => s.offlineReport?.oqlQueries);
   const selectedId = useInspectorStore((s) => s.selectedSnapshotId);
   const selectSnapshot = useInspectorStore((s) => s.selectSnapshot);
   const closeHeap = useInspectorStore((s) => s.closeHeap);
@@ -234,11 +235,7 @@ export function OqlConsoleView() {
   const grid = result ? `48px repeat(${result.columns.length}, minmax(180px, 1fr))` : '48px 1fr';
 
   if (mode === 'offline') {
-    return (
-      <EmptyState icon={<SquareTerminal size={22} />} title="OQL Console">
-        OQL выполняется по открытому heap dump на сервере инспектора; офлайн-отчёт хранит только результаты анализа.
-      </EmptyState>
-    );
+    return <OfflineOqlHistory queries={offlineQueries ?? []} />;
   }
   if (!chosen) {
     return (
@@ -433,6 +430,52 @@ export function OqlConsoleView() {
           />
         )}
       </Modal>
+    </div>
+  );
+}
+
+/** OQL queries of an offline report: each query with the first rows it returned. */
+function OfflineOqlHistory({ queries }: { queries: OqlHistoryEntryDto[] }) {
+  if (queries.length === 0) {
+    return (
+      <EmptyState icon={<SquareTerminal size={22} />} title="OQL Console">
+        OQL выполняется по открытому heap dump на сервере инспектора; в этом отчёте нет выполненных запросов.
+      </EmptyState>
+    );
+  }
+  return (
+    <div className="space-y-3 p-4">
+      <h1 className="flex items-center gap-2 text-sm font-semibold">
+        <SquareTerminal size={16} className="text-accent-cyan" />
+        OQL-запросы из отчёта ({queries.length})
+      </h1>
+      {queries.map((q) => (
+        <section key={`${q.snapshotId}-${q.executedAt}`} className="rounded-md border border-kraken-border bg-kraken-panel">
+          <div className="flex flex-wrap gap-3 border-b border-kraken-border px-3 py-2 text-2xs text-kraken-muted">
+            <span className="font-mono">{q.snapshotId}</span>
+            <span>{formatTime(q.executedAt)}</span>
+            <span>{q.rowCount} строк{q.truncated ? ' (обрезано)' : ''}</span>
+            <span>{q.durationMs} ms</span>
+          </div>
+          <pre className="overflow-x-auto px-3 py-2 font-mono text-xs text-[#cfe8ff]">{q.query}</pre>
+          {q.preview.length > 0 && (
+            <div className="overflow-x-auto border-t border-kraken-border">
+              <table className="w-full text-xs">
+                <thead className="text-2xs uppercase text-kraken-subtle">
+                  <tr>{q.columns.map((c) => <th key={c} className="px-3 py-1.5 text-left">{c}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {q.preview.map((row, i) => (
+                    <tr key={i} className="border-t border-kraken-border/60">
+                      {row.map((cell, j) => <td key={j} className="px-3 py-1 font-mono">{cell}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
     </div>
   );
 }

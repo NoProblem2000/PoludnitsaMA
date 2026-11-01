@@ -71,6 +71,23 @@ public class ReportController {
         }
     }
 
+    /** Renders an uploaded {@code .json.gz} / {@code .json} report as standalone HTML (offline reports in the UI). */
+    @PostMapping(path = "/html", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StreamingResponseBody> renderHtml(@RequestPart("file") MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new OperationRejectedException(400, "REPORT_EMPTY", "The uploaded file is empty");
+        }
+        SessionReportBundle bundle;
+        try (InputStream in = file.getInputStream()) {
+            bundle = reports.readBundle(in);
+        }
+        return ResponseEntity.ok()
+                .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\""
+                        + ReportExportImportService.fileName(bundle, ".html") + "\"")
+                .body(out -> reports.writeHtml(bundle, out));
+    }
+
     @GetMapping("/imported")
     public List<ImportedReportDto> imported() {
         return reports.importedReports();

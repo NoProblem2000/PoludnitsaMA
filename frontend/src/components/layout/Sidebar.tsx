@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Activity, Cpu, GitCompare, type LucideIcon, Network, ShieldAlert, SquareTerminal } from 'lucide-react';
+import { Activity, Cpu, Gauge, GitCompare, type LucideIcon, Network, ShieldAlert, SquareTerminal, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   countFindings,
@@ -16,13 +16,25 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const ITEMS: NavItem[] = [
-  { id: 'live', label: 'Live Memory & Traffic', hint: 'Пулы, GC, Leak Radar', icon: Activity },
-  { id: 'heuristics', label: 'Leak Heuristics', hint: 'Почему течёт?', icon: ShieldAlert },
-  { id: 'dominators', label: 'Dominator Tree & Sunburst', hint: 'Кто держит память', icon: Network },
-  { id: 'diff', label: 'Snapshot Comparison', hint: 'Diff двух снапшотов', icon: GitCompare },
-  { id: 'oql', label: 'OQL Console', hint: 'Запросы к открытому дампу', icon: SquareTerminal },
-  { id: 'cpu', label: 'CPU & Timeline', hint: 'Flame graph, hotspots, подсистемы', icon: Cpu },
+const SECTIONS: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Память',
+    items: [
+      { id: 'live', label: 'Live Memory & Traffic', hint: 'Пулы, GC, Leak Radar', icon: Activity },
+      { id: 'heuristics', label: 'Leak Heuristics', hint: 'Почему течёт?', icon: ShieldAlert },
+      { id: 'dominators', label: 'Dominator Tree & Sunburst', hint: 'Кто держит память', icon: Network },
+      { id: 'diff', label: 'Snapshot Comparison', hint: 'Diff двух снапшотов', icon: GitCompare },
+      { id: 'oql', label: 'OQL Console', hint: 'Запросы к открытому дампу', icon: SquareTerminal },
+    ],
+  },
+  {
+    title: 'Производительность',
+    items: [
+      { id: 'cpu', label: 'CPU & Timeline (dotTrace)', hint: 'Flame graph, hotspots, подсистемы', icon: Cpu },
+      { id: 'threads', label: 'Threads & Contention', hint: 'Deadlock-и, мониторы, серии дампов', icon: Users },
+      { id: 'gc', label: 'GC & Safepoints', hint: 'gc.log, паузы, TTSP', icon: Gauge },
+    ],
+  },
 ];
 
 function Counter({ value, tone }: { value: number; tone: 'critical' | 'warning' }) {
@@ -52,8 +64,12 @@ export function Sidebar() {
 
   return (
     <nav className="flex w-60 shrink-0 flex-col border-r border-kraken-border bg-kraken-panel">
-      <ul className="flex-1 space-y-0.5 p-2">
-        {ITEMS.map((item) => {
+      <div className="flex-1 overflow-y-auto p-2">
+        {SECTIONS.map((section) => (
+          <div key={section.title} className="mb-2">
+            <div className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wider text-kraken-subtle">{section.title}</div>
+            <ul className="space-y-0.5">
+        {section.items.map((item) => {
           const Icon = item.icon;
           const active = view === item.id;
           return (
@@ -88,7 +104,10 @@ export function Sidebar() {
             </li>
           );
         })}
-      </ul>
+            </ul>
+          </div>
+        ))}
+      </div>
 
       {process && (
         <div className="space-y-1 border-t border-kraken-border p-3 text-2xs text-kraken-muted">

@@ -5,19 +5,28 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.poludnitsa.inspector.api.dto.DiffPairDto;
 import com.poludnitsa.inspector.api.dto.ImportedReportDto;
+import com.poludnitsa.inspector.api.dto.GcAnalysisDto;
 import com.poludnitsa.inspector.api.dto.InspectionFindingDto;
 import com.poludnitsa.inspector.api.dto.JvmProcessDto;
 import com.poludnitsa.inspector.api.dto.MetricsPointDto;
+import com.poludnitsa.inspector.api.dto.OqlHistoryEntryDto;
+import com.poludnitsa.inspector.api.dto.ProfileReportDto;
 import com.poludnitsa.inspector.api.dto.ReportExportRequestDto;
 import com.poludnitsa.inspector.api.dto.SnapshotDiffDto;
 import com.poludnitsa.inspector.api.dto.SnapshotStatus;
+import com.poludnitsa.inspector.api.dto.ThreadLiveDto;
+import com.poludnitsa.inspector.api.dto.ThreadSeriesAnalysisDto;
 import com.poludnitsa.inspector.common.InspectorException;
 import com.poludnitsa.inspector.common.OperationRejectedException;
 import com.poludnitsa.inspector.discovery.JvmDiscoveryService;
+import com.poludnitsa.inspector.gc.GcLogParserAndAnalyzerService;
 import com.poludnitsa.inspector.live.LiveMemoryCollectorService;
+import com.poludnitsa.inspector.oql.OqlExecutionService;
+import com.poludnitsa.inspector.profiler.CpuAndTimelineProfilerService;
 import com.poludnitsa.inspector.snapshot.SnapshotDiffService;
 import com.poludnitsa.inspector.snapshot.SnapshotRecord;
 import com.poludnitsa.inspector.snapshot.SnapshotStore;
+import com.poludnitsa.inspector.threads.ThreadContentionAndSeriesService;
 import java.io.BufferedInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -43,6 +52,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -53,7 +63,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReportExportImportService {
 
-    public static final int FORMAT_VERSION = 1;
+    /** 1: memory only (steps 1–8); 2: plus CPU profiles, thread series / contention, GC analyses, OQL history. */
+    public static final int FORMAT_VERSION = 2;
+    private static final int REPORT_PROFILES = 5;
     static final String GENERATOR = "JVM Memory & Leak Inspector 0.1.0";
     private static final long MAX_IMPORT_BYTES = 512L << 20;
     private static final int MAX_IMPORTED_REPORTS = 10;
@@ -67,6 +79,10 @@ public class ReportExportImportService {
     private final LiveMemoryCollectorService collector;
     private final JvmDiscoveryService discovery;
     private final ObjectMapper mapper;
+    private final CpuAndTimelineProfilerService profiler;
+    private final ThreadContentionAndSeriesService threads;
+    private final GcLogParserAndAnalyzerService gc;
+    private final OqlExecutionService oql;
     private final HtmlReportRenderer renderer = new HtmlReportRenderer();
     private final Map<String, SessionReportBundle> imported = Collections.synchronizedMap(
             new LinkedHashMap<>(16, 0.75f, false) {
@@ -76,14 +92,28 @@ public class ReportExportImportService {
                 }
             });
 
+    /** Memory-only reports (no diagnostics services), e.g. in tests. */
     public ReportExportImportService(SnapshotStore store, SnapshotDiffService diffs,
                                      LiveMemoryCollectorService collector, JvmDiscoveryService discovery,
                                      ObjectMapper mapper) {
+        this(store, diffs, collector, discovery, mapper, null, null, null, null);
+    }
+
+    @Autowired
+    public ReportExportImportService(SnapshotStore store, SnapshotDiffService diffs,
+                                     LiveMemoryCollectorService collector, JvmDiscoveryService discovery,
+                                     ObjectMapper mapper, CpuAndTimelineProfilerService profiler,
+                                     ThreadContentionAndSeriesService threads, GcLogParserAndAnalyzerService gc,
+                                     OqlExecutionService oql) {
         this.store = store;
         this.diffs = diffs;
         this.collector = collector;
         this.discovery = discovery;
         this.mapper = mapper;
+        this.profiler = profiler;
+        this.threads = threads;
+        this.gc = gc;
+        this.oql = oql;
     }
 
     // ---------------------------------------------------------------- export
@@ -127,13 +157,27 @@ public class ReportExportImportService {
                 .flatMap(r -> r.data().findings().stream())
                 .forEach(f -> findings.putIfAbsent(f.id(), f));
 
+        // diagnostics of the same process (and every uploaded file): profiles, threads, GC, OQL
+        boolean diagnostics = request.diagnosticsIncluded();
+        List<ProfileReportDto> profiles = diagnostics && profiler != null
+                ? profiler.reportProfiles(pid, REPORT_PROFILES) : List.of();
+        List<ThreadSeriesAnalysisDto> series = diagnostics && threads != null ? threads.readyAnalyses(pid) : List.of();
+        ThreadLiveDto live = diagnostics && threads != null && pid != null ? threads.liveIfRunning(pid) : null;
+        List<GcAnalysisDto> gcAnalyses = diagnostics && gc != null ? gc.readyAnalyses(pid) : List.of();
+        List<OqlHistoryEntryDto> queries = new ArrayList<>();
+        if (diagnostics && oql != null) {
+            Set<String> included = records.stream().map(SnapshotRecord::id).collect(Collectors.toSet());
+            oql.history(null).stream().filter(q -> included.contains(q.snapshotId())).forEach(queries::add);
+        }
+
         Instant now = Instant.now();
         String title = request.title() != null && !request.title().isBlank() ? request.title()
-                : "Отчёт по памяти JVM" + (process != null ? " — " + process.displayName() + " (PID "
+                : "Отчёт по JVM" + (process != null ? " — " + process.displayName() + " (PID "
                 + process.pid() + ")" : "");
         return new SessionReportBundle(FORMAT_VERSION, "rep-" + FILE_TIME.format(now) + "-"
                 + UUID.randomUUID().toString().substring(0, 8), title, now, GENERATOR, hostName(), process, history,
-                snapshots, comparisons, new ArrayList<>(findings.values()));
+                snapshots, comparisons, new ArrayList<>(findings.values()), profiles, series, live, gcAnalyses,
+                queries);
     }
 
     /** Gzipped JSON; {@code out} is not closed. */
@@ -153,26 +197,16 @@ public class ReportExportImportService {
         return "jvm-memory-report-" + FILE_TIME.format(bundle.generatedAt()) + extension;
     }
 
+    /** Reads a report file ({@code .json.gz} / {@code .json}, e.g. opened offline in the UI) without importing it. */
+    public SessionReportBundle readBundle(InputStream input) {
+        return read(input);
+    }
+
     // ---------------------------------------------------------------- import
 
     /** Reads a {@code .json.gz} or {@code .json} report and registers its snapshots in this session. */
     public ImportedReportDto importReport(InputStream input) {
-        SessionReportBundle bundle;
-        try (InputStream in = open(input)) {
-            bundle = mapper.readValue(in, SessionReportBundle.class);
-        } catch (SizeLimitException e) {
-            throw new OperationRejectedException(413, "REPORT_TOO_LARGE",
-                    "Report is larger than " + (MAX_IMPORT_BYTES >> 20) + " MiB after decompression");
-        } catch (JsonProcessingException e) {
-            throw new OperationRejectedException(400, "REPORT_INVALID",
-                    "Not a JVM Memory & Leak Inspector report: " + e.getOriginalMessage());
-        } catch (IOException e) {
-            throw new InspectorException(400, "REPORT_UNREADABLE", "Cannot read report: " + e.getMessage(), e);
-        }
-        if (bundle == null || bundle.formatVersion() < 1 || bundle.formatVersion() > FORMAT_VERSION) {
-            throw new OperationRejectedException(400, "REPORT_VERSION_UNSUPPORTED",
-                    "Unsupported report format version " + (bundle == null ? "?" : bundle.formatVersion()));
-        }
+        SessionReportBundle bundle = read(input);
         Map<String, String> ids = new LinkedHashMap<>();
         List<String> warnings = new ArrayList<>();
         for (SessionReportBundle.SnapshotReport snapshot : bundle.snapshots()) {
@@ -209,6 +243,26 @@ public class ReportExportImportService {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private SessionReportBundle read(InputStream input) {
+        SessionReportBundle bundle;
+        try (InputStream in = open(input)) {
+            bundle = mapper.readValue(in, SessionReportBundle.class);
+        } catch (SizeLimitException e) {
+            throw new OperationRejectedException(413, "REPORT_TOO_LARGE",
+                    "Report is larger than " + (MAX_IMPORT_BYTES >> 20) + " MiB after decompression");
+        } catch (JsonProcessingException e) {
+            throw new OperationRejectedException(400, "REPORT_INVALID",
+                    "Not a JVM Memory & Leak Inspector report: " + e.getOriginalMessage());
+        } catch (IOException e) {
+            throw new InspectorException(400, "REPORT_UNREADABLE", "Cannot read report: " + e.getMessage(), e);
+        }
+        if (bundle == null || bundle.formatVersion() < 1 || bundle.formatVersion() > FORMAT_VERSION) {
+            throw new OperationRejectedException(400, "REPORT_VERSION_UNSUPPORTED",
+                    "Unsupported report format version " + (bundle == null ? "?" : bundle.formatVersion()));
+        }
+        return bundle;
+    }
 
     private List<SnapshotRecord> selectSnapshots(ReportExportRequestDto request) {
         List<SnapshotRecord> records = new ArrayList<>();

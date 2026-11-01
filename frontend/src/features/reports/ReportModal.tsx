@@ -120,6 +120,7 @@ export function ReportModal() {
   const [title, setTitle] = useState('');
   const [withHistory, setWithHistory] = useState(true);
   const [withPair, setWithPair] = useState(true);
+  const [withDiagnostics, setWithDiagnostics] = useState(true);
 
   useEffect(() => {
     if (open) {
@@ -136,6 +137,7 @@ export function ReportModal() {
       await exportReport(format, {
         title,
         includeMetricsHistory: withHistory,
+        includeDiagnostics: withDiagnostics,
         diffs: withPair && pair ? [{ baselineId: pair[0].snapshotId, currentId: pair[1].snapshotId }] : [],
       });
     } else {
@@ -181,12 +183,16 @@ export function ReportModal() {
                   <input type="checkbox" checked={withPair && pair != null} disabled={!pair} onChange={(event) => setWithPair(event.target.checked)} className="accent-[#00e5ff]" />
                   {pair ? `Diff #${number(pair[0].snapshotId)} → #${number(pair[1].snapshotId)}` : 'Diff выбранной пары (не выбрана — старший с новейшим)'}
                 </label>
+                <label className="flex items-center gap-2" title="Готовые CPU-профили, серии thread dump-ов и live-контеншн, GC-анализы и история OQL">
+                  <input type="checkbox" checked={withDiagnostics} onChange={(event) => setWithDiagnostics(event.target.checked)} className="accent-[#00e5ff]" />
+                  CPU, Threads, GC & Safepoints, OQL
+                </label>
               </div>
             </>
           ) : (
             <p className="text-xs text-kraken-muted">
               {report?.title} — {report?.snapshots.length} снапшотов{reportFile ? `, файл ${reportFile.name} (${formatBytes(reportFile.size)})` : ''}.
-              HTML собирает бэкенд: снапшоты отчёта будут импортированы в его сессию.
+              HTML собирает бэкенд из этого файла, ничего не импортируя в свою сессию.
             </p>
           )}
           <div className="flex gap-3">

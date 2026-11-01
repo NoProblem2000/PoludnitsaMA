@@ -28,6 +28,11 @@ public final class SubsystemClassifier {
     private SubsystemClassifier() {
     }
 
+    /** JDBC API, drivers and connection pools. */
+    public static boolean isJdbc(String className) {
+        return startsWith(className, JDBC);
+    }
+
     public static Subsystem classifySample(ProfileData data, int stack) {
         int[] frames = data.stack(stack);
         boolean framework = false;

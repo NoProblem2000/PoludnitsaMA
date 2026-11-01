@@ -6,6 +6,8 @@ import com.poludnitsa.inspector.api.dto.FlameGraphDto;
 import com.poludnitsa.inspector.api.dto.HotspotDto;
 import com.poludnitsa.inspector.api.dto.JvmProcessDto;
 import com.poludnitsa.inspector.api.dto.ProfileMetric;
+import com.poludnitsa.inspector.api.dto.ProfileMetricReportDto;
+import com.poludnitsa.inspector.api.dto.ProfileReportDto;
 import com.poludnitsa.inspector.api.dto.ProfileRequestDto;
 import com.poludnitsa.inspector.api.dto.ProfileSource;
 import com.poludnitsa.inspector.api.dto.ProfileStatus;
@@ -257,6 +259,36 @@ public class CpuAndTimelineProfilerService implements DisposableBean {
         ProfileData data = ready(id);
         Window window = window(data, fromMs, toMs, thread);
         return SubsystemBreakdownBuilder.build(id, data, metric, window.from, window.to, window.thread);
+    }
+
+    /**
+     * Finished profiles for a report, newest first (of {@code pid}, or all when null): the timeline and, per metric,
+     * the whole-profile flame graph, hotspots and subsystem split — no raw samples.
+     */
+    public List<ProfileReportDto> reportProfiles(Long pid, int limit) {
+        List<String> ids = new ArrayList<>();
+        synchronized (profiles) {
+            profiles.values().stream()
+                    .filter(p -> p.data() != null && (pid == null || p.pid == pid))
+                    .sorted(Comparator.comparing((ProfileRecord p) -> p.startedAt).reversed())
+                    .limit(limit)
+                    .forEach(p -> ids.add(p.id));
+        }
+        List<ProfileReportDto> result = new ArrayList<>();
+        for (String id : ids) {
+            try {
+                ProfileData data = ready(id);
+                List<ProfileMetricReportDto> metrics = new ArrayList<>();
+                for (ProfileMetric metric : data.metrics().stream().sorted().toList()) {
+                    metrics.add(new ProfileMetricReportDto(metric, flame(id, metric, null, null, null),
+                            hotspots(id, metric, null, null, null, 50), subsystems(id, metric, null, null, null)));
+                }
+                result.add(new ProfileReportDto(get(id), timeline(id, null), metrics));
+            } catch (InspectorException e) {
+                // evicted meanwhile
+            }
+        }
+        return result;
     }
 
     // ---------------------------------------------------------------- helpers

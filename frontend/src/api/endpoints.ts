@@ -10,6 +10,9 @@ import type {
   DiskSpaceCheckDto,
   DominatorNodeDto,
   FlameGraphDto,
+  GcAnalysisDto,
+  GcAnalysisSummaryDto,
+  GcLiveRequestDto,
   GcRootPathDto,
   GcTriggerResultDto,
   HotspotDto,
@@ -34,6 +37,10 @@ import type {
   SnapshotDiffDto,
   SnapshotSummaryDto,
   SubsystemBreakdownDto,
+  ThreadLiveDto,
+  ThreadSeriesAnalysisDto,
+  ThreadSeriesRequestDto,
+  ThreadSeriesSummaryDto,
   TimelineDto,
 } from './types';
 
@@ -62,7 +69,7 @@ function windowQuery(metric: ProfileMetric, window: ProfileWindow, extra: Record
   return params.toString();
 }
 
-/** Typed REST calls of the backend (see ProcessControlController, SnapshotController, ReportController). */
+/** Typed REST calls of the backend (see ProcessControlController, SnapshotController, ReportController, …). */
 export const api = {
   about: {
     get: () => http.get<AboutDto>('/api/about'),
@@ -139,12 +146,37 @@ export const api = {
     subsystems: (id: string, metric: ProfileMetric, window: ProfileWindow) =>
       http.get<SubsystemBreakdownDto>(`/api/profiles/${encode(id)}/subsystems?${windowQuery(metric, window)}`),
   },
+  threads: {
+    /** starts (and keeps, while polled) contention sampling of the target; deadlocks, hotspots, threads */
+    live: (pid: number) => http.get<ThreadLiveDto>(`/api/threads/${pid}/live`),
+    resetLive: (pid: number) => http.del<void>(`/api/threads/${pid}/live`),
+    series: () => http.get<ThreadSeriesSummaryDto[]>('/api/threads/series'),
+    startSeries: (request: ThreadSeriesRequestDto) => http.post<ThreadSeriesSummaryDto>('/api/threads/series', request),
+    /** jstack / jcmd Thread.print text with one or more dumps (multipart part "file") */
+    upload: (file: File) => http.upload<ThreadSeriesSummaryDto>('/api/threads/series/upload', 'file', file),
+    get: (id: string) => http.get<ThreadSeriesSummaryDto>(`/api/threads/series/${encode(id)}`),
+    analysis: (id: string) => http.get<ThreadSeriesAnalysisDto>(`/api/threads/series/${encode(id)}/analysis`),
+    delete: (id: string) => http.del<void>(`/api/threads/series/${encode(id)}`),
+  },
+  gc: {
+    list: () => http.get<GcAnalysisSummaryDto[]>('/api/gc'),
+    /** gc.log (Unified Logging, plain or .gz) or .jfr (multipart part "file") */
+    upload: (file: File) => http.upload<GcAnalysisSummaryDto>('/api/gc/upload', 'file', file),
+    startLive: (request: GcLiveRequestDto) => http.post<GcAnalysisSummaryDto>('/api/gc/live', request),
+    /** ends a live recording early and analyses what it has */
+    stop: (id: string) => http.post<GcAnalysisSummaryDto>(`/api/gc/${encode(id)}/stop`),
+    get: (id: string) => http.get<GcAnalysisSummaryDto>(`/api/gc/${encode(id)}`),
+    analysis: (id: string) => http.get<GcAnalysisDto>(`/api/gc/${encode(id)}/analysis`),
+    delete: (id: string) => http.del<void>(`/api/gc/${encode(id)}`),
+  },
   reports: {
     export: (format: 'JSON' | 'HTML', request: ReportExportRequestDto) =>
       http.download(`/api/reports/export?format=${format}`, request,
         format === 'JSON' ? 'jvm-memory-report.json.gz' : 'jvm-memory-report.html'),
     /** Registers a report file's snapshots in the backend session (multipart part "file"). */
     import: (file: File) => http.upload<ImportedReportDto>('/api/reports/import', 'file', file),
+    /** Renders a report file (offline mode) as standalone HTML without importing it. */
+    renderHtml: (file: File) => http.uploadDownload('/api/reports/html', 'file', file, 'jvm-report.html'),
   },
 };
 

@@ -70,7 +70,7 @@ class ReportExportImportServiceTest {
                 List.of(finding("leak-1", Severity.CRITICAL)));
 
         SessionReportBundle bundle = reports.buildBundle(new ReportExportRequestDto(null, List.of(), List.of(),
-                true, null));
+                true, null, null));
 
         assertThat(bundle.formatVersion()).isEqualTo(ReportExportImportService.FORMAT_VERSION);
         assertThat(bundle.snapshots()).extracting(s -> s.summary().snapshotId())
@@ -87,7 +87,7 @@ class ReportExportImportServiceTest {
     void htmlIsStandaloneAndEscapesHeapContent() throws Exception {
         deep(List.of(stats("com.acme." + HOSTILE, 1, 16L, 16L)), List.of(finding("leak-1", Severity.CRITICAL)));
         SessionReportBundle bundle = reports.buildBundle(new ReportExportRequestDto(null, List.of(), List.of(),
-                false, "Отчёт <b>тест</b>"));
+                false, "Отчёт <b>тест</b>", null));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         reports.writeHtml(bundle, out);
@@ -105,11 +105,11 @@ class ReportExportImportServiceTest {
         SnapshotRecord original = deep(List.of(stats("com.acme.Order", 10, 320L, 640L)),
                 List.of(finding("leak-1", Severity.WARNING)));
         SessionReportBundle bundle = reports.buildBundle(new ReportExportRequestDto(null, List.of(original.id()),
-                List.of(), false, null));
+                List.of(), false, null, null));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         reports.writeJson(bundle, out);
         try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(out.toByteArray()))) {
-            assertThat(new String(gzip.readAllBytes(), StandardCharsets.UTF_8)).contains("\"formatVersion\":1");
+            assertThat(new String(gzip.readAllBytes(), StandardCharsets.UTF_8)).contains("\"formatVersion\":2");
         }
 
         ImportedReportDto imported = reports.importReport(new ByteArrayInputStream(out.toByteArray()));
@@ -128,7 +128,7 @@ class ReportExportImportServiceTest {
     void plainJsonIsAcceptedAndGarbageRejected() throws Exception {
         deep(List.of(stats("com.acme.Order", 10, 320L, 640L)), List.of());
         SessionReportBundle bundle = reports.buildBundle(new ReportExportRequestDto(null, List.of(), List.of(),
-                false, null));
+                false, null, null));
         byte[] json = SnapshotTestData.mapper().writeValueAsBytes(bundle);
 
         assertThat(reports.importReport(new ByteArrayInputStream(json)).snapshotIds()).hasSize(1);

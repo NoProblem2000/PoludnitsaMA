@@ -28,7 +28,7 @@ import {
 } from './liveSeries';
 
 export type Mode = 'live' | 'offline';
-export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff' | 'oql' | 'cpu';
+export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff' | 'oql' | 'cpu' | 'threads' | 'gc';
 /** safe: {@code dumpHeap(live=false)}, no Full GC; exact: {@code live=true}, Full GC first. */
 export type DumpMode = 'safe' | 'exact';
 export type StreamState = 'idle' | 'connecting' | 'live' | 'reconnecting' | 'offline';
@@ -52,6 +52,8 @@ export interface ExportOptions {
   includeMetricsHistory?: boolean;
   /** baseline / current pairs to embed as diffs; empty: oldest vs newest */
   diffs?: { baselineId: string; currentId: string }[];
+  /** CPU profiles, thread series, live contention, GC analyses and OQL history (default true) */
+  includeDiagnostics?: boolean;
 }
 
 interface Busy {
@@ -497,6 +499,7 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
           includeMetricsHistory: options.includeMetricsHistory ?? true,
           diffs: options.diffs ?? [],
           title: options.title?.trim() || null,
+          includeDiagnostics: options.includeDiagnostics ?? true,
         });
         saveBlob(download);
         toast('success', `Отчёт ${format} сохранён`, download.fileName);
@@ -523,17 +526,11 @@ export const useInspectorStore = create<InspectorState>()((set, get) => {
           if (!file) {
             throw new Error('Файл отчёта недоступен, откройте его заново');
           }
-          // The HTML renderer lives in the backend: import the snapshots there, export them, then drop the copies
-          // so they do not show up among the live snapshots of that PID.
-          const imported = await api.reports.import(file);
-          const ids = Object.values(imported.snapshotIds);
-          try {
-            const download = await api.reports.export('HTML', { snapshotIds: ids, includeMetricsHistory: false, title: report.title });
-            saveBlob(download);
-            toast('success', 'Отчёт HTML сохранён', download.fileName);
-          } finally {
-            await Promise.allSettled(ids.map((id) => api.snapshots.delete(id)));
-          }
+          // The HTML renderer lives in the backend: it renders the file as it is (memory, CPU, threads, GC, OQL)
+          // without registering anything in the session.
+          const download = await api.reports.renderHtml(file);
+          saveBlob(download);
+          toast('success', 'Отчёт HTML сохранён', download.fileName);
         }
       } catch (error) {
         toast('error', 'Экспорт не удался', errorMessage(error));

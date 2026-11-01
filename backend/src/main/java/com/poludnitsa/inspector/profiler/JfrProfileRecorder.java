@@ -40,6 +40,11 @@ public final class JfrProfileRecorder {
 
     /** Creates and starts the recording; returns its id on the target. */
     public long start(long pid, String profileId, Duration duration, boolean tracing) {
+        return start(pid, RECORDING_PREFIX + profileId, duration, settings(tracing));
+    }
+
+    /** Creates and starts a recording named {@code name} with explicit event settings (e.g. GC and safepoints). */
+    public long start(long pid, String name, Duration duration, Map<String, String> settings) {
         return connections.call(pid, (connection, metadata) -> {
             if (!metadata.flightRecorderAvailable()) {
                 throw new OperationRejectedException(409, "JFR_UNAVAILABLE",
@@ -49,14 +54,14 @@ public final class JfrProfileRecorder {
             long id = recorder.newRecording();
             try {
                 Map<String, String> options = new HashMap<>();
-                options.put("name", RECORDING_PREFIX + profileId);
+                options.put("name", name);
                 // a safety net: the recording ends on the target even if the inspector goes away
                 options.put("duration", (duration.toSeconds() + 60) + " s");
                 options.put("maxSize", Long.toString(512L << 20));
                 options.put("disk", "true");
                 options.put("dumpOnExit", "false");
                 recorder.setRecordingOptions(id, options);
-                recorder.setRecordingSettings(id, settings(tracing));
+                recorder.setRecordingSettings(id, settings);
                 recorder.startRecording(id);
                 return id;
             } catch (RuntimeException e) {
