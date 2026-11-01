@@ -17,6 +17,7 @@ public record InspectorProperties(
         @DefaultValue Snapshots snapshots,
         @DefaultValue Inspections inspections,
         @DefaultValue Oql oql,
+        @DefaultValue Profiler profiler,
         @DefaultValue Web web
 ) {
 
@@ -226,6 +227,49 @@ public record InspectorProperties(
             @DefaultValue("10000") int maxQueryLength,
             @DefaultValue("1000000") int pathSearchLimit
     ) {
+    }
+
+    /**
+     * CPU, wall-clock and allocation profiles of a target with its event timeline (JFR in the target, or
+     * async-profiler on Linux / macOS).
+     *
+     * @param cpuSamplingInterval    {@code jdk.ExecutionSample#period}: one stack per running thread per period
+     * @param nativeSamplingInterval {@code jdk.NativeMethodSample#period}: threads in native code
+     * @param eventThreshold         minimum duration of park, monitor, sleep and socket / file events (sampling mode)
+     * @param tracingThreshold       the same in tracing mode, which also records every thrown exception
+     * @param maxDuration            longest recording accepted
+     * @param maxProfiles            profiles kept in memory; the oldest finished ones are dropped
+     * @param maxSamples             samples and events kept per profile; a longer recording is truncated
+     * @param asyncProfilerPath      {@code asprof} binary or async-profiler home; empty: PATH, ASYNC_PROFILER_HOME,
+     *                               /opt/async-profiler
+     * @param asyncProfilerInterval  sampling interval of async-profiler (cpu and wall)
+     * @param flameMinShare          frames below this share of the total are cut from flame graphs
+     * @param flameMaxNodes          upper bound of nodes in one flame graph
+     * @param timelineBuckets        columns of the timeline
+     * @param timelineThreads        thread lanes shown (busiest first, WildFly pool threads preferred)
+     * @param workDir                local directory for transferred recordings, defaults to
+     *                               {@code ${java.io.tmpdir}/jvm-leak-inspector/profiles}
+     */
+    public record Profiler(
+            @DefaultValue("10ms") Duration cpuSamplingInterval,
+            @DefaultValue("20ms") Duration nativeSamplingInterval,
+            @DefaultValue("10ms") Duration eventThreshold,
+            @DefaultValue("1ms") Duration tracingThreshold,
+            @DefaultValue("10m") Duration maxDuration,
+            @DefaultValue("8") int maxProfiles,
+            @DefaultValue("3000000") int maxSamples,
+            String asyncProfilerPath,
+            @DefaultValue("10ms") Duration asyncProfilerInterval,
+            @DefaultValue("0.0005") double flameMinShare,
+            @DefaultValue("20000") int flameMaxNodes,
+            @DefaultValue("240") int timelineBuckets,
+            @DefaultValue("12") int timelineThreads,
+            Path workDir
+    ) {
+        public Path resolvedWorkDir() {
+            return workDir != null ? workDir
+                    : Path.of(System.getProperty("java.io.tmpdir"), "jvm-leak-inspector", "profiles");
+        }
     }
 
     /**

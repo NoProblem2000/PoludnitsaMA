@@ -155,6 +155,24 @@ src/
 * `ClassLoaderGrouping`, `RetentionPathSampler` (пути удержания топ-классов, используются в diff), инспекции
   `EmptyAndSparseCollectionsInspector` и `BoxedPrimitivesOverheadInspector`, `JfrAllocationStackAggregator`.
 
+### Шаг 9: CPU & Timeline (`profiler`, `ProfilerController` → `/api/profiles`)
+* Данные цели — только через JMX: `JfrProfileRecorder` создаёт запись в целевой JVM (`FlightRecorderMXBean`),
+  останавливает её и переносит `.jfr` потоком; `jdk.jfr.consumer.RecordingStream` не используется (он смотрел бы
+  на JVM анализатора). `AsyncProfilerBridge` вызывает `asprof … -o jfr`, результат разбирается тем же парсером.
+* `JfrProfileParser` (`RecordingFile`) → `ProfileBuilder` → `ProfileData`: интернированные фреймы и стеки, сэмплы
+  CPU / NATIVE / WALL / ALLOC, события с длительностью (Park, MonitorEnter/Wait, Sleep, Socket/File I/O), GC-паузы,
+  CPULoad, исключения. Нативные сэмплы внутри события того же потока помечаются `NATIVE_COVERED`: Wall-Clock не
+  считает ожидание дважды. Веса: микросекунды для времени, байты для аллокаций.
+* `CallTreeEngine` — flame graph (обрезка по `flame-min-share` / `flame-max-nodes`), hotspots (self — листовой фрейм,
+  total — каждый фрейм раз на стек), butterfly (callers от ближайшего к листу вхождения, callees от корневого),
+  diff двух деревьев по ключу `класс.метод`. `SubsystemClassifier` идёт от листа к корню: JDBC-драйверы и пулы →
+  JDBC, `org.hibernate` → HIBERNATE, код приложения → BUSINESS, Undertow / сервлеты / RESTEasy → HTTP.
+  `TimelineBuilder` раскладывает всё по колонкам, потоки пулов WildFly выбираются в дорожки первыми.
+* Каждый запрос дерева принимает `from` / `to` (мс от начала профиля) и `thread` — это кросс-фильтр выделенного
+  на таймлайне интервала. Frontend: `features/cpu/DotTraceCpuAndTimelineView.tsx` (форма, карточки профилей, вкладки),
+  `ProfileTimeline` (SVG-дорожки с brush), `FlameGraphView` (обычный и differential), `HotspotsButterflyPanel`,
+  `SubsystemsPanel`.
+
 ### Релизный контур
 * `mvn clean package -Prelease` (профиль `release` в `backend/pom.xml`): UI всегда собирается (`-DskipUi`
   запрещён enforcer'ом), `spring-boot:build-info` → `META-INF/build-info.properties`, `git-commit-id-maven-plugin`

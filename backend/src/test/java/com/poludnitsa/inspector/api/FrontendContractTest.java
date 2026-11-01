@@ -10,6 +10,7 @@ import com.poludnitsa.inspector.api.rest.AboutController;
 import com.poludnitsa.inspector.api.rest.HeapQueryController;
 import com.poludnitsa.inspector.api.rest.InspectionController;
 import com.poludnitsa.inspector.api.rest.ProcessControlController;
+import com.poludnitsa.inspector.api.rest.ProfilerController;
 import com.poludnitsa.inspector.api.rest.ReportController;
 import com.poludnitsa.inspector.api.rest.SnapshotController;
 import java.io.IOException;
@@ -62,7 +63,8 @@ class FrontendContractTest {
     /** Client-side unions without a Java enum (the WebSocket client frame is a record with a String action). */
     private static final Set<String> TS_ONLY = Set.of("LiveStreamClientMessage");
     private static final List<Class<?>> CONTROLLERS = List.of(ProcessControlController.class, SnapshotController.class,
-            ReportController.class, InspectionController.class, AboutController.class, HeapQueryController.class);
+            ReportController.class, InspectionController.class, AboutController.class, HeapQueryController.class,
+            ProfilerController.class);
 
     private static final Pattern INTERFACE = Pattern.compile("(?ms)^export interface (\\w+)(?:<\\w+>)? \\{\\n(.*?)^}");
     private static final Pattern FIELD = Pattern.compile("(?m)^  (\\w+)(\\??): (.+);$");
@@ -238,6 +240,12 @@ class FrontendContractTest {
         while (set.find()) {
             builtQuery.add(set.group(1));
         }
+        // the call tree queries of the profiler build theirs in windowQuery(metric, window, { extra })
+        Set<String> windowQuery = new LinkedHashSet<>(List.of("metric"));
+        Matcher windowSet = Pattern.compile("params\\.set\\('(\\w+)'").matcher(endpoints);
+        while (windowSet.find()) {
+            windowQuery.add(windowSet.group(1));
+        }
 
         List<String> problems = new ArrayList<>();
         int checked = 0;
@@ -261,6 +269,15 @@ class FrontendContractTest {
             }
             if (url.contains("query.toString()")) {
                 query.addAll(builtQuery);
+            }
+            Matcher window = Pattern.compile("windowQuery\\([^{)]*(?:\\{([^}]*)})?").matcher(url);
+            if (window.find()) {
+                query.addAll(windowQuery);
+                for (String key : window.group(1) == null ? new String[0] : window.group(1).split(",")) {
+                    if (!key.isBlank()) {
+                        query.add(key.split(":")[0].trim());
+                    }
+                }
             }
             Mapping mapping = mappings.stream().filter(x -> x.method().equals(verb) && x.path().equals(path))
                     .findFirst().orElse(null);

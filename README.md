@@ -18,6 +18,11 @@ Client**, работающих на том же bare-metal хосте или VM.
   до GC Root любого объекта с учётом или без weak / soft / phantom / finalizer-ссылок.
 * **Кто создаёт объекты** — горячие точки и стеки аллокаций из JFR (`jdk.ObjectAllocationSample`, опционально TLAB-события)
   в деталях класса Leak Radar.
+* **CPU & Timeline** (аналог dotTrace) — запись JFR в целевой JVM через её `FlightRecorderMXBean` или
+  async-profiler (`cpu` / `wall` / `alloc`, Linux и macOS): таймлайн CPU, GC-пауз, блокировок, I/O и состояний
+  потоков с выделением интервала мышью, flame graph с зумом и поиском, differential flame graph двух профилей,
+  Hotspots с Butterfly (callers / callees) и разбивка времени по подсистемам: бизнес-код, JDBC / PostgreSQL,
+  Hibernate, HTTP (Undertow, сервлеты), I/O, блокировки, GC.
 * **Отчёты** — JSON (открывается в этом UI на любом компьютере, офлайн) и автономный HTML.
 
 Лицензия — [Apache License 2.0](LICENSE); встроенные компоненты перечислены в [NOTICE](NOTICE).
@@ -147,6 +152,13 @@ java -Xms256m -Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Dfile.encoding
 | `inspector.oql.max-open-heaps` | `1` | открытых дампов одновременно; лишний закрывает самый старый |
 | `inspector.oql.query-timeout` | `60s` | запрос отменяется после этого |
 | `inspector.jfr.tlab-events` | `false` | писать `ObjectAllocationInNewTLAB`/`OutsideTLAB` со стеками: полнее, но заметный оверхед |
+| `inspector.profiler.work-dir` | `${java.io.tmpdir}/jvm-leak-inspector/profiles` | `.jfr` профиля, пока он разбирается (потом удаляется) |
+| `inspector.profiler.cpu-sampling-interval` | `10ms` | период `jdk.ExecutionSample`; `native-sampling-interval` — `20ms` |
+| `inspector.profiler.event-threshold` | `10ms` | порог Park / Monitor / Sleep / Socket / File в режиме Sampling; `tracing-threshold` — `1ms` |
+| `inspector.profiler.max-duration` | `10m` | самая длинная запись |
+| `inspector.profiler.max-profiles` | `8` | профилей в памяти; лишний вытесняет самый старый |
+| `inspector.profiler.max-samples` | `3000000` | сэмплов и событий на профиль, остальное отбрасывается (профиль помечается «обрезан») |
+| `inspector.profiler.async-profiler-path` | — | `asprof` или каталог async-profiler; иначе `ASYNC_PROFILER_HOME`, `/opt/async-profiler`, `PATH` |
 
 ## Безопасная работа в продакшене
 
@@ -157,6 +169,12 @@ java -Xms256m -Xmx1024m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Dfile.encoding
 * **Deep Heap Dump**: stop-the-world на всё время записи.
   *Safe Dump* (`live=false`) не вызывает Full GC — безопасный выбор рядом с heartbeat Hazelcast-клиента;
   *Exact Dump* (`live=true`) сначала делает Full GC: только живые объекты, точнее diff, но пауза дольше.
+* **CPU-профиль через JFR** пишется в целевой JVM (`FlightRecorderMXBean.newRecording`), забирается потоком
+  (`openStream` / `readStream`) и разбирается в анализаторе из файла. Оверхед Sampling — обычно 1–2 %; *Tracing*
+  (события от 1 мс и каждое исключение со стеком) заметно дороже — включать на минуты, не на часы.
+* **async-profiler** запускается как `asprof -e cpu|wall|alloc -d N -f profile.jfr <pid>`: тот же OS-пользователь, что
+  у цели, для `cpu` нужен `kernel.perf_event_paranoid <= 1` (иначе async-profiler откатывается на таймерный режим без стеков ядра), в контейнере —
+  `SYS_ADMIN` или `perf_event_open` в seccomp. На Windows недоступен.
 * **Force GC** требует подтверждения: на больших кучах это пауза в секунды.
 
 ## Разработка

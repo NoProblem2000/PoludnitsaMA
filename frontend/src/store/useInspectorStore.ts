@@ -28,7 +28,7 @@ import {
 } from './liveSeries';
 
 export type Mode = 'live' | 'offline';
-export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff' | 'oql';
+export type ViewId = 'live' | 'heuristics' | 'dominators' | 'diff' | 'oql' | 'cpu';
 /** safe: {@code dumpHeap(live=false)}, no Full GC; exact: {@code live=true}, Full GC first. */
 export type DumpMode = 'safe' | 'exact';
 export type StreamState = 'idle' | 'connecting' | 'live' | 'reconnecting' | 'offline';

@@ -650,3 +650,210 @@ export interface AllocationStacksDto {
   stacks: AllocationStackDto[];
   eventTypes: string[];
 }
+
+// ---- CPU & Timeline profiling (ProfilerController) ----
+
+export type ProfileSource = 'JFR' | 'ASYNC_PROFILER';
+
+export type ProfileMetric = 'CPU' | 'WALL' | 'ALLOC';
+
+export type ProfileStatus = 'RECORDING' | 'PARSING' | 'READY' | 'FAILED';
+
+export type Subsystem = 'BUSINESS' | 'JDBC' | 'HIBERNATE' | 'HTTP' | 'IO' | 'LOCKS' | 'GC' | 'FRAMEWORK' | 'JDK';
+
+export type ThreadState = 'RUNNABLE' | 'BLOCKED' | 'WAITING' | 'IO';
+
+export interface ProfileRequestDto {
+  pid: number;
+  /** null: JFR */
+  source?: ProfileSource | null;
+  /** what async-profiler samples; JFR records all metrics at once */
+  mode?: ProfileMetric | null;
+  durationSeconds: number;
+  /** park / monitor / I/O from 1 ms and every exception with its stack (JFR) */
+  tracing?: boolean | null;
+}
+
+export interface ProfilerCapabilitiesDto {
+  jfrAvailable: boolean;
+  asyncProfilerAvailable: boolean;
+  asyncProfilerPath: string | null;
+  asyncProfilerReason: string | null;
+  os: string;
+}
+
+export interface ProfileSummaryDto {
+  profileId: string;
+  pid: number;
+  displayName: string;
+  source: ProfileSource;
+  mode: ProfileMetric;
+  status: ProfileStatus;
+  startedAt: string;
+  /** requested recording length */
+  durationMs: number;
+  /** time covered by the parsed events */
+  recordedMs: number;
+  progressMessage: string | null;
+  errorMessage: string | null;
+  sampleCount: number;
+  eventCount: number;
+  threadCount: number;
+  samplingIntervalMs: number;
+  tracing: boolean;
+  /** metrics with data in this profile */
+  metrics: ProfileMetric[];
+  truncated: boolean;
+}
+
+export interface TimeSpanDto {
+  startMs: number;
+  durationMs: number;
+  label: string;
+}
+
+export interface ThreadLaneDto {
+  /** for the thread filter of the call tree queries */
+  threadIndex: number;
+  name: string;
+  /** dominant state per column, null where the thread did nothing visible */
+  states: (ThreadState | null)[];
+  cpuMs: number;
+  blockedMs: number;
+  waitingMs: number;
+  ioMs: number;
+}
+
+export interface TimelineDto {
+  profileId: string;
+  startEpochMs: number;
+  durationMs: number;
+  bucketMs: number;
+  buckets: number;
+  jvmCpuPercent: (number | null)[];
+  machineCpuPercent: (number | null)[];
+  samples: number[];
+  gcPauseMs: number[];
+  lockMs: number[];
+  waitMs: number[];
+  ioMs: number[];
+  gcPauses: TimeSpanDto[];
+  threads: ThreadLaneDto[];
+}
+
+/** Values are microseconds for CPU / WALL, bytes for ALLOC. */
+export interface FlameNodeDto {
+  className: string;
+  methodName: string;
+  packageCategory: PackageCategory;
+  selfSamples: number;
+  totalSamples: number;
+  selfValue: number;
+  totalValue: number;
+  /** null for ALLOC */
+  totalTimeMs: number | null;
+  /** of the tree total, 0..100 */
+  percent: number;
+  children: FlameNodeDto[];
+}
+
+export interface FlameGraphDto {
+  profileId: string;
+  metric: ProfileMetric;
+  /** "us" or "bytes" */
+  unit: string;
+  fromMs: number;
+  toMs: number;
+  threadName: string | null;
+  totalValue: number;
+  totalSamples: number;
+  root: FlameNodeDto;
+  prunedNodes: number;
+}
+
+export interface DiffFlameNodeDto {
+  className: string;
+  methodName: string;
+  packageCategory: PackageCategory;
+  baselineValue: number;
+  targetValue: number;
+  baselinePercent: number;
+  targetPercent: number;
+  /** positive: regression, negative: improvement */
+  deltaPercent: number;
+  children: DiffFlameNodeDto[];
+}
+
+export interface DiffFlameGraphDto {
+  baselineId: string;
+  targetId: string;
+  metric: ProfileMetric;
+  unit: string;
+  baselineTotal: number;
+  targetTotal: number;
+  root: DiffFlameNodeDto;
+}
+
+export interface HotspotDto {
+  className: string;
+  methodName: string;
+  packageCategory: PackageCategory;
+  subsystem: Subsystem;
+  selfSamples: number;
+  totalSamples: number;
+  selfValue: number;
+  totalValue: number;
+  selfPercent: number;
+  totalPercent: number;
+}
+
+export interface ButterflyDto {
+  profileId: string;
+  metric: ProfileMetric;
+  unit: string;
+  className: string;
+  methodName: string;
+  totalValue: number;
+  selfValue: number;
+  percent: number;
+  /** inverted tree: children are the callers */
+  callers: FlameNodeDto;
+  /** what the method calls */
+  callees: FlameNodeDto;
+}
+
+export interface SubsystemShareDto {
+  subsystem: Subsystem;
+  label: string;
+  value: number;
+  samples: number;
+  percent: number;
+  topMethods: HotspotDto[];
+}
+
+export interface TracedEventStatDto {
+  /** JFR event type, e.g. jdk.SocketRead */
+  type: string;
+  label: string;
+  count: number;
+  totalMs: number;
+  maxMs: number;
+  topDetail: string | null;
+}
+
+export interface ExceptionCountDto {
+  className: string;
+  count: number;
+}
+
+export interface SubsystemBreakdownDto {
+  profileId: string;
+  metric: ProfileMetric;
+  unit: string;
+  fromMs: number;
+  toMs: number;
+  totalValue: number;
+  subsystems: SubsystemShareDto[];
+  traced: TracedEventStatDto[];
+  exceptions: ExceptionCountDto[];
+}

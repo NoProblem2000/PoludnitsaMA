@@ -1,4 +1,5 @@
 import { type DragEvent } from 'react';
+import { DotTraceCpuAndTimelineView } from '@/features/cpu/DotTraceCpuAndTimelineView';
 import { SnapshotDiffView } from '@/features/diff/SnapshotDiffView';
 import { DominatorTreeView } from '@/features/heap/DominatorTreeView';
 import { HeuristicsAdvisorView } from '@/features/heuristics/HeuristicsAdvisorView';
@@ -42,6 +43,7 @@ export function AppShell() {
           {view === 'dominators' && <DominatorTreeView />}
           {view === 'diff' && <SnapshotDiffView />}
           {view === 'oql' && <OqlConsoleView />}
+          {view === 'cpu' && <DotTraceCpuAndTimelineView />}
         </main>
       </div>
       <SnapshotTimeline />

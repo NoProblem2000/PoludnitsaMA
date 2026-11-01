@@ -3,12 +3,16 @@ import type {
   AboutDto,
   ActiveProcessDto,
   AllocationStacksDto,
+  ButterflyDto,
   ClassLoaderStatsDto,
   ClassStatsDto,
+  DiffFlameGraphDto,
   DiskSpaceCheckDto,
   DominatorNodeDto,
+  FlameGraphDto,
   GcRootPathDto,
   GcTriggerResultDto,
+  HotspotDto,
   ImportedReportDto,
   InspectionFindingDto,
   InspectionRuleRunDto,
@@ -22,14 +26,41 @@ import type {
   OqlResultDto,
   PageDto,
   PathMode,
+  ProfileMetric,
+  ProfileRequestDto,
+  ProfileSummaryDto,
+  ProfilerCapabilitiesDto,
   ReportExportRequestDto,
   SnapshotDiffDto,
   SnapshotSummaryDto,
+  SubsystemBreakdownDto,
+  TimelineDto,
 } from './types';
 
 export type ClassSort = 'RETAINED' | 'SHALLOW' | 'INSTANCES' | 'NAME';
 
+/** Cross-filter of the call tree queries: a brushed interval (ms from the profile start) and a thread. */
+export interface ProfileWindow {
+  from?: number | null;
+  to?: number | null;
+  thread?: number | null;
+}
+
 const encode = encodeURIComponent;
+
+function windowQuery(metric: ProfileMetric, window: ProfileWindow, extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams({ metric, ...extra });
+  if (window.from != null) {
+    params.set('from', window.from.toFixed(1));
+  }
+  if (window.to != null) {
+    params.set('to', window.to.toFixed(1));
+  }
+  if (window.thread != null) {
+    params.set('thread', String(window.thread));
+  }
+  return params.toString();
+}
 
 /** Typed REST calls of the backend (see ProcessControlController, SnapshotController, ReportController). */
 export const api = {
@@ -87,6 +118,26 @@ export const api = {
     diff: (baselineId: string, currentId: string, limit = 5000, includeShrinking = true) =>
       http.get<SnapshotDiffDto>(`/api/snapshots/diff?baseline=${encode(baselineId)}&current=${encode(currentId)}`
         + `&limit=${limit}&includeShrinking=${includeShrinking}`),
+  },
+  profiles: {
+    capabilities: () => http.get<ProfilerCapabilitiesDto>('/api/profiles/capabilities'),
+    list: () => http.get<ProfileSummaryDto[]>('/api/profiles'),
+    start: (request: ProfileRequestDto) => http.post<ProfileSummaryDto>('/api/profiles', request),
+    get: (id: string) => http.get<ProfileSummaryDto>(`/api/profiles/${encode(id)}`),
+    delete: (id: string) => http.del<void>(`/api/profiles/${encode(id)}`),
+    timeline: (id: string, buckets: number) =>
+      http.get<TimelineDto>(`/api/profiles/${encode(id)}/timeline?buckets=${buckets}`),
+    flame: (id: string, metric: ProfileMetric, window: ProfileWindow) =>
+      http.get<FlameGraphDto>(`/api/profiles/${encode(id)}/flame?${windowQuery(metric, window)}`),
+    /** widths follow the target, colours the change of share */
+    diffFlame: (baselineId: string, targetId: string, metric: ProfileMetric) =>
+      http.get<DiffFlameGraphDto>(`/api/profiles/diff/flame?baseline=${encode(baselineId)}&target=${encode(targetId)}&metric=${metric}`),
+    hotspots: (id: string, metric: ProfileMetric, window: ProfileWindow, limit = 200) =>
+      http.get<HotspotDto[]>(`/api/profiles/${encode(id)}/hotspots?${windowQuery(metric, window, { limit: String(limit) })}`),
+    butterfly: (id: string, className: string, method: string, metric: ProfileMetric, window: ProfileWindow) =>
+      http.get<ButterflyDto>(`/api/profiles/${encode(id)}/butterfly?${windowQuery(metric, window, { className, method })}`),
+    subsystems: (id: string, metric: ProfileMetric, window: ProfileWindow) =>
+      http.get<SubsystemBreakdownDto>(`/api/profiles/${encode(id)}/subsystems?${windowQuery(metric, window)}`),
   },
   reports: {
     export: (format: 'JSON' | 'HTML', request: ReportExportRequestDto) =>
