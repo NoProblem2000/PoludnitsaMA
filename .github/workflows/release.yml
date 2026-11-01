@@ -32,9 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -53,7 +53,33 @@ jobs:
       # backend compile + unit/integration tests + frontend/backend contract test; the UI is built by the release job
       - name: Tests
         working-directory: backend
-        run: mvn $MAVEN_CLI_OPTS clean verify -DskipUi
+        run: mvn $MAVEN_CLI_OPTS clean verify -DskipUi 2>&1 | tee mvn.log
+
+      # failing tests and Maven errors as annotations: readable on the run page without opening the log
+      - name: Report failures
+        if: failure()
+        run: |
+          python3 - <<'EOF'
+          import glob, xml.etree.ElementTree as ET
+          def esc(s):
+              return s.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          shown = 0
+          for path in sorted(glob.glob('backend/target/surefire-reports/TEST-*.xml')):
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  for problem in list(case.findall('failure')) + list(case.findall('error')):
+                      if shown < 9:
+                          text = (problem.get('message') or '') + '\n' + (problem.text or '')[:3000]
+                          print(f"::error title={case.get('classname')}.{case.get('name')}::{esc(text)}")
+                      shown += 1
+          if shown == 0:
+              try:
+                  errors = [l.rstrip() for l in open('backend/mvn.log', encoding='utf-8', errors='replace') if '[ERROR]' in l]
+              except FileNotFoundError:
+                  errors = []
+              print(f"::error title=Maven::{esc(chr(10).join(errors[:60]) or 'no [ERROR] lines')}")
+          else:
+              print(f"::error title=Failed tests::{shown} failing test(s), the first 9 are annotated")
+          EOF
 
       - name: Test reports
         if: failure()
@@ -69,12 +95,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # git-commit-id-maven-plugin reads branch / commit from the full history
           fetch-depth: 0
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
