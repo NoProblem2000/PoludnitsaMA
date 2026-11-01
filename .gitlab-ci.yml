@@ -1,17 +1,23 @@
 # JVM Memory & Leak Inspector: release pipeline.
 #
-# Runs only for the `release` branch (a push or a merged MR into it) on a classic GitLab runner with the
-# shell executor: bare metal or a VM, no Docker. The runner host needs:
+# Runs for the `release` branch (a push or a merged MR into it) and for `v*` tags on a classic GitLab runner
+# with the shell executor: bare metal or a VM, no Docker. Every such pipeline ends with a GitLab Release
+# (Deploy > Releases) that links jvm-memory-inspector-release.zip / .jar:
+#   - tag v1.2.3          -> release v1.2.3
+#   - push to `release`   -> release v<pom version without -SNAPSHOT>-build.<pipeline iid>, tag created on the commit
+# The runner host needs:
 #   - JDK 17+ (java and jdk.attach module; JAVA_HOME set or java on PATH), Maven 3.8+ on PATH
 #   - bash, git, unzip; internet access to Maven Central and nodejs.org (Node 20 is installed into
 #     backend/target/node by the build itself, nothing to install by hand)
+#   - release-cli on PATH for the gitlab-release job (https://gitlab.com/gitlab-org/release-cli/-/releases,
+#     one static binary: install it as /usr/local/bin/release-cli)
 #   - Linux: the integration tests start child JVMs and attach to them, so run the runner service as a normal
 #     user (not root) and keep /tmp writable for the attach sockets.
 # Register the runner with the tags below (or change them):  gitlab-runner register --executor shell --tag-list "shell,jdk17"
 
 workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
 
 stages:
   - validate
@@ -45,7 +51,7 @@ default:
 license-check:
   stage: validate
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
   script:
     - test -s LICENSE || { echo "LICENSE is missing"; exit 1; }
     - test -s NOTICE  || { echo "NOTICE is missing"; exit 1; }
@@ -62,7 +68,7 @@ license-check:
 test:
   stage: validate
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
   script:
     # backend compile + unit/integration tests + frontend/backend contract test; the UI itself is built by the release job
     - cd backend
@@ -76,13 +82,19 @@ test:
 version:
   stage: validate
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
   script:
     - cd backend
     - APP_VERSION=$(mvn $MAVEN_CLI_OPTS -q help:evaluate -Dexpression=project.version -DforceStdout)
     - test -n "$APP_VERSION"
     - echo "APP_VERSION=$APP_VERSION" > ../release.env
-    - echo "RELEASE_TAG=v${APP_VERSION%-SNAPSHOT}" >> ../release.env
+    # a tag pipeline releases that tag; a branch pipeline gets a new, unique tag per pipeline
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        echo "RELEASE_TAG=$CI_COMMIT_TAG" >> ../release.env
+      else
+        echo "RELEASE_TAG=v${APP_VERSION%-SNAPSHOT}-build.$CI_PIPELINE_IID" >> ../release.env
+      fi
     - cat ../release.env
   artifacts:
     reports:
@@ -95,7 +107,7 @@ version:
 release-build:
   stage: release
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
   needs:
     - job: license-check
     - job: test
@@ -107,44 +119,61 @@ release-build:
     # tests already ran in the validate stage
     - mvn $MAVEN_CLI_OPTS clean package -Prelease -DskipTests
     - unzip -l target/jvm-memory-inspector-release.zip
-    - unzip -p target/jvm-leak-inspector.jar META-INF/build-info.properties
-    - unzip -p target/jvm-leak-inspector.jar BOOT-INF/classes/git.properties
-    - unzip -l target/jvm-leak-inspector.jar | grep -E "META-INF/(LICENSE|NOTICE)$|static/index.html$"
-    - sha256sum target/jvm-memory-inspector-release.zip target/jvm-leak-inspector.jar | tee target/SHA256SUMS
+    - unzip -p target/jvm-memory-inspector-release.jar META-INF/build-info.properties
+    - unzip -p target/jvm-memory-inspector-release.jar BOOT-INF/classes/git.properties
+    - test "$(unzip -l target/jvm-memory-inspector-release.jar | grep -cE 'META-INF/(LICENSE|NOTICE)$|static/index.html$')" -eq 3
+    - (cd target && sha256sum jvm-memory-inspector-release.zip jvm-memory-inspector-release.jar | tee SHA256SUMS)
+    # the release links point at this job's artifacts
+    - echo "BUILD_JOB_ID=$CI_JOB_ID" > ../build.env
   artifacts:
     name: "jvm-memory-inspector-$RELEASE_TAG-$CI_COMMIT_SHORT_SHA"
     expire_in: never
     paths:
       - backend/target/jvm-memory-inspector-release.zip
-      - backend/target/*.jar
+      - backend/target/jvm-memory-inspector-release.jar
       - backend/target/SHA256SUMS
+    reports:
+      dotenv: build.env
 
-# Optional: a GitLab Release with the version tag, linking the artifacts above. Needs `release-cli` on the runner
-# host (https://gitlab.com/gitlab-org/release-cli) and a tag that does not exist yet; started by hand.
-gitlab-release:
+# GitLab Release with the tag of the version job, created automatically after the build. The assets are links to
+# the release-build artifacts (kept forever); direct_asset_path gives each one a permanent URL:
+#   $CI_PROJECT_URL/-/releases/<tag>/downloads/jvm-memory-inspector-release.zip
+# and the newest release is always at $CI_PROJECT_URL/-/releases/permalink/latest/downloads/jvm-memory-inspector-release.zip
+release-job:
   stage: release
   rules:
-    - if: '$CI_COMMIT_BRANCH == "release"'
-      when: manual
-      allow_failure: true
+    - if: '$CI_COMMIT_BRANCH == "release" || $CI_COMMIT_TAG =~ /^v/'
   needs:
     - job: release-build
-      artifacts: false
+      artifacts: true
     - job: version
       artifacts: true
-  before_script: []
+  before_script:
+    - command -v release-cli || { echo "release-cli is not installed on the runner host"; exit 1; }
   script:
-    - echo "Creating release $RELEASE_TAG for $CI_COMMIT_SHA"
+    - echo "Creating release $RELEASE_TAG for $CI_COMMIT_SHA from build job $BUILD_JOB_ID"
   release:
     tag_name: "$RELEASE_TAG"
     ref: "$CI_COMMIT_SHA"
     name: "JVM Memory & Leak Inspector $RELEASE_TAG"
-    description: "Release build of $CI_COMMIT_SHORT_SHA from branch release. Download: jvm-memory-inspector-release.zip (jar, start-inspector.sh/.bat, LICENSE, NOTICE, README.md)."
+    description: |
+      JVM Memory & Leak Inspector $APP_VERSION, commit $CI_COMMIT_SHORT_SHA ($CI_COMMIT_REF_NAME).
+
+      **Скачать:** [jvm-memory-inspector-release.zip]($CI_PROJECT_URL/-/releases/$RELEASE_TAG/downloads/jvm-memory-inspector-release.zip)
+      — jar с UI, start-inspector.sh / start-inspector.bat, LICENSE, NOTICE, README.md.
+      Только jar: [jvm-memory-inspector-release.jar]($CI_PROJECT_URL/-/releases/$RELEASE_TAG/downloads/jvm-memory-inspector-release.jar).
+      Нужна Java 17+ (JDK с модулем jdk.attach), UI — http://127.0.0.1:8080.
     assets:
       links:
         - name: "jvm-memory-inspector-release.zip"
-          url: "$CI_PROJECT_URL/-/jobs/artifacts/release/raw/backend/target/jvm-memory-inspector-release.zip?job=release-build"
+          url: "$CI_PROJECT_URL/-/jobs/$BUILD_JOB_ID/artifacts/raw/backend/target/jvm-memory-inspector-release.zip"
+          direct_asset_path: "/jvm-memory-inspector-release.zip"
           link_type: package
-        - name: "jvm-leak-inspector.jar"
-          url: "$CI_PROJECT_URL/-/jobs/artifacts/release/raw/backend/target/jvm-leak-inspector.jar?job=release-build"
+        - name: "jvm-memory-inspector-release.jar"
+          url: "$CI_PROJECT_URL/-/jobs/$BUILD_JOB_ID/artifacts/raw/backend/target/jvm-memory-inspector-release.jar"
+          direct_asset_path: "/jvm-memory-inspector-release.jar"
           link_type: package
+        - name: "SHA256SUMS"
+          url: "$CI_PROJECT_URL/-/jobs/$BUILD_JOB_ID/artifacts/raw/backend/target/SHA256SUMS"
+          direct_asset_path: "/SHA256SUMS"
+          link_type: other

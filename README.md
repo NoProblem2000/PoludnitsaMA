@@ -79,6 +79,16 @@ start-inspector.sh / start-inspector.bat   скрипты запуска
 | Сеть | Не нужна: UI и API слушают только `127.0.0.1`. С другой машины — через SSH-туннель: `ssh -L 8080:127.0.0.1:8080 user@host`. |
 | Только для сборки | Maven 3.8+, доступ к Maven Central и nodejs.org (Node 20 сборка скачивает в `backend/target/node`). |
 
+## Скачать готовую сборку
+
+Последний релиз (GitHub Releases, собирается автоматически из ветки `release` и тегов `v*`):
+
+* [jvm-memory-inspector-release.zip](https://github.com/NoProblem2000/PoludnitsaMA/releases/latest/download/jvm-memory-inspector-release.zip)
+  — jar с UI, скрипты запуска, LICENSE, NOTICE, README.md;
+* [jvm-memory-inspector-release.jar](https://github.com/NoProblem2000/PoludnitsaMA/releases/latest/download/jvm-memory-inspector-release.jar)
+  — только исполняемый jar (`java -jar jvm-memory-inspector-release.jar`);
+* все версии — [Releases](https://github.com/NoProblem2000/PoludnitsaMA/releases), рядом с файлами — `SHA256SUMS`.
+
 ## Сборка из ветки `release`
 
 ```bash
@@ -94,15 +104,29 @@ mvn clean package -Prelease
 
 ```
 backend/target/jvm-leak-inspector.jar               исполняемый jar (UI внутри)
+backend/target/jvm-memory-inspector-release.jar     тот же jar под именем релиза — отдельный файл для скачивания
 backend/target/jvm-memory-inspector-release.zip
   jvm-memory-inspector-<version>/
     jvm-leak-inspector.jar  start-inspector.sh  start-inspector.bat  LICENSE  NOTICE  README.md
 ```
 
 Другие варианты: `mvn clean package` — тот же jar без build/git-информации и без zip; `mvn verify -DskipUi` — только
-бэкенд и тесты. С `-Prelease` флаг `-DskipUi` запрещён. Пайплайн `.gitlab-ci.yml` делает то же самое на каждый push
-или merge в `release`: проверка лицензии и тесты, затем `mvn clean package -Prelease -DskipTests`; zip и jar
-сохраняются артефактами задачи с тегом версии в названии.
+бэкенд и тесты. С `-Prelease` флаг `-DskipUi` запрещён.
+
+**Автоматические релизы.** На каждый push в `release` и на каждый тег `v*` срабатывают оба пайплайна —
+`.github/workflows/release.yml` (GitHub Actions) и `.gitlab-ci.yml` (GitLab, shell runner): проверка лицензии и тесты,
+затем `mvn clean package -Prelease -DskipTests` и публикация релиза со ссылками на
+`jvm-memory-inspector-release.zip`, `jvm-memory-inspector-release.jar` и `SHA256SUMS`:
+
+| Событие | Тег и релиз |
+|---|---|
+| тег `v1.2.3` | `v1.2.3` |
+| push в `release` | `v<версия pom без -SNAPSHOT>-build.<номер запуска>` (GitHub — run number, GitLab — pipeline IID); тег ставится на коммит |
+
+GitHub: `gh release create` с `GITHUB_TOKEN` (`permissions: contents: write`), новый релиз помечается *Latest*.
+GitLab: задача `release-job` (ключевое слово `release:`, на хосте раннера нужен `release-cli`) ссылается на
+артефакты `release-build` (хранятся бессрочно); постоянная ссылка —
+`<проект>/-/releases/permalink/latest/downloads/jvm-memory-inspector-release.zip`.
 
 ## Установка и запуск
 

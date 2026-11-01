@@ -1,0 +1,152 @@
+# JVM Memory & Leak Inspector: GitHub release pipeline (the GitLab twin is .gitlab-ci.yml).
+#
+# A push to the `release` branch or a `v*` tag runs the tests, builds `mvn clean package -Prelease` and publishes a
+# GitHub Release with jvm-memory-inspector-release.zip, jvm-memory-inspector-release.jar and SHA256SUMS attached.
+#   - tag v1.2.3            -> release "v1.2.3" on that tag
+#   - push to `release`     -> release "v<pom version without -SNAPSHOT>-build.<run number>", tag created on the commit
+# The newest release is "Latest", so the zip is always at
+#   https://github.com/<owner>/<repo>/releases/latest/download/jvm-memory-inspector-release.zip
+# Tags created here with GITHUB_TOKEN do not start another run.
+
+name: Release
+
+on:
+  push:
+    branches: [release]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MAVEN_CLI_OPTS: -B -ntp -e
+
+jobs:
+  test:
+    name: License check & tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: License files
+        run: |
+          test -s LICENSE && test -s NOTICE
+          grep -q "Version 2.0, January 2004" LICENSE
+          grep -q "<name>Apache License, Version 2.0</name>" backend/pom.xml
+          for lib in "Spring Boot" "NetBeans Profiler" "ECharts" "React"; do
+            grep -q "$lib" NOTICE || { echo "NOTICE does not mention $lib"; exit 1; }
+            grep -q "$lib" frontend/src/features/about/AboutLicenseModal.tsx || { echo "About dialog does not mention $lib"; exit 1; }
+          done
+
+      # backend compile + unit/integration tests + frontend/backend contract test; the UI is built by the release job
+      - name: Tests
+        working-directory: backend
+        run: mvn $MAVEN_CLI_OPTS clean verify -DskipUi
+
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 14
+
+  release:
+    name: Build & publish release
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # git-commit-id-maven-plugin reads branch / commit from the full history
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Version and tag
+        id: version
+        working-directory: backend
+        run: |
+          version=$(mvn $MAVEN_CLI_OPTS -q help:evaluate -Dexpression=project.version -DforceStdout)
+          test -n "$version"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v${version%-SNAPSHOT}-build.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Version $version, release tag $tag"
+
+      # tests already ran in the test job
+      - name: Release build
+        working-directory: backend
+        run: mvn $MAVEN_CLI_OPTS clean package -Prelease -DskipTests
+
+      - name: Check artifacts
+        working-directory: backend/target
+        run: |
+          unzip -l jvm-memory-inspector-release.zip
+          unzip -p jvm-memory-inspector-release.jar META-INF/build-info.properties
+          unzip -p jvm-memory-inspector-release.jar BOOT-INF/classes/git.properties
+          test "$(unzip -l jvm-memory-inspector-release.jar | grep -cE 'META-INF/(LICENSE|NOTICE)$|static/index.html$')" -eq 3
+          sha256sum jvm-memory-inspector-release.zip jvm-memory-inspector-release.jar | tee SHA256SUMS
+
+      - name: Keep build as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-memory-inspector-${{ steps.version.outputs.tag }}
+          path: |
+            backend/target/jvm-memory-inspector-release.zip
+            backend/target/jvm-memory-inspector-release.jar
+            backend/target/SHA256SUMS
+
+      - name: Publish GitHub Release
+        working-directory: backend/target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          base="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases"
+          cat > notes.md <<EOF
+          JVM Memory & Leak Inspector **$VERSION**, commit \`${GITHUB_SHA::8}\` (\`$GITHUB_REF_NAME\`).
+
+          **Скачать:** [jvm-memory-inspector-release.zip]($base/download/$TAG/jvm-memory-inspector-release.zip)
+          — jar с UI, \`start-inspector.sh\` / \`start-inspector.bat\`, LICENSE, NOTICE, README.md.
+          Только jar: [jvm-memory-inspector-release.jar]($base/download/$TAG/jvm-memory-inspector-release.jar).
+          Последний релиз всегда: $base/latest/download/jvm-memory-inspector-release.zip
+
+          \`\`\`
+          unzip jvm-memory-inspector-release.zip && cd jvm-memory-inspector-*/ && ./start-inspector.sh
+          \`\`\`
+          Нужна Java 17+ (JDK с модулем jdk.attach), UI — http://127.0.0.1:8080. Контрольные суммы — SHA256SUMS.
+          EOF
+          files="jvm-memory-inspector-release.zip jvm-memory-inspector-release.jar SHA256SUMS"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # re-run of the same tag: replace the files
+            gh release upload "$TAG" $files --clobber
+            gh release edit "$TAG" --notes-file notes.md --latest
+          else
+            gh release create "$TAG" $files --target "$GITHUB_SHA" \
+              --title "JVM Memory & Leak Inspector $TAG" --notes-file notes.md --latest
+          fi
+          echo "### Release $TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "$base/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"

@@ -230,6 +230,11 @@ src/
   объявлен запасным после явно объявленного `central` (сейчас он отвечает 401, а первым в списке его спрашивали
   бы о каждой зависимости).
 
+* Профиль `release` дополнительно копирует исполняемый jar в `target/jvm-memory-inspector-release.jar`
+  (`maven-antrun-plugin`): отдельный файл релиза; внутри zip jar сохраняет имя `jvm-leak-inspector.jar`, его ищут
+  скрипты запуска. Публикация: `.github/workflows/release.yml` (`gh release create`) и задача `release-job` в
+  `.gitlab-ci.yml` (`release:` + `release-cli`) — на push в `release` и на теги `v*`.
+
 ## 4. Цветовая система (Tailwind `kraken.*`)
 
 | Токен | HEX | Назначение |
