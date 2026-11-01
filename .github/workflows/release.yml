@@ -83,7 +83,7 @@ jobs:
 
       - name: Test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: surefire-reports
           path: backend/target/surefire-reports/
@@ -136,7 +136,7 @@ jobs:
           sha256sum jvm-memory-inspector-release.zip jvm-memory-inspector-release.jar | tee SHA256SUMS
 
       - name: Keep build as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: jvm-memory-inspector-${{ steps.version.outputs.tag }}
           path: |

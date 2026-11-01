@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { FileDropZone } from '@/components/common/FileDropZone';
 import { ToolbarButton } from '@/components/common/ToolbarButton';
 import { useNow } from '@/hooks/useNow';
+import { useViewActive } from '@/hooks/useViewActive';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { palette } from '@/theme/palette';
 import { SEVERITY_COLOR } from '@/utils/categories';
@@ -51,9 +52,13 @@ function LiveGc() {
     }
   }, []);
 
+  // again on every return to the view: it stays mounted while hidden
+  const active = useViewActive();
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (active) {
+      void refresh();
+    }
+  }, [active, refresh]);
 
   const running = list.some((a) => a.status === 'RUNNING');
   useEffect(() => {

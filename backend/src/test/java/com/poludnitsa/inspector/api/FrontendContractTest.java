@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.poludnitsa.inspector.api.rest.AboutController;
@@ -61,7 +62,12 @@ class FrontendContractTest {
     /** TS names whose Java type has another name or package. */
     private static final Map<String, String> JAVA_TYPES = Map.of(
             "SnapshotDataDto", "com.poludnitsa.inspector.snapshot.SnapshotData",
-            "SessionReportBundle", "com.poludnitsa.inspector.report.SessionReportBundle");
+            "SessionReportBundle", "com.poludnitsa.inspector.report.SessionReportBundle",
+            "SnapshotReport", "com.poludnitsa.inspector.report.SessionReportBundle$SnapshotReport");
+    /** Fields whose TS type is deliberately narrower than the Java one. */
+    private static final Set<String> NARROWED_TYPES = Set.of(
+            "GrowthWindowDto.windowMinutes", // 1 | 5 | 15: the windows of LeakRadar
+            "PageDto.items");                // generic T[]
     /** Client-side unions without a Java enum (the WebSocket client frame is a record with a String action). */
     private static final Set<String> TS_ONLY = Set.of("LiveStreamClientMessage");
     private static final List<Class<?>> CONTROLLERS = List.of(ProcessControlController.class, SnapshotController.class,
@@ -73,7 +79,7 @@ class FrontendContractTest {
     private static final Pattern UNION = Pattern.compile("(?ms)^export type (\\w+) =(.*?);$");
     private static final Pattern LITERAL = Pattern.compile("'([A-Z0-9_]+)'");
     private static final Pattern CALL = Pattern.compile(
-            "http\\.(get|text|post|put|del|download|uploadDownload|upload)(?:<[^>]+(?:<[^>]+>)?[^>]*>)?\\(\\s*(['`])(.*?)\\2(.*?)\\)[,;]?\\s*$",
+            "http\\.(get|text|post|put|del|download|uploadDownload|upload)(?:<([^>]+(?:<[^>]+>)?[^>]*)>)?\\(\\s*(['`])(.*?)\\3(.*?)\\)[,;]?\\s*$",
             Pattern.MULTILINE | Pattern.DOTALL);
 
     private static String types;
@@ -175,6 +181,92 @@ class FrontendContractTest {
         assertThat(checked).isGreaterThanOrEqualTo(13);
     }
 
+    /**
+     * Field types, not only names: the TS type of every field must be what Jackson writes for its Java type (numbers,
+     * strings incl. {@code Instant}, booleans, arrays of collections, {@code Record} of maps, DTO / enum names).
+     * {@code | null} is ignored here, nullability of primitives is checked above.
+     */
+    @Test
+    void everyFieldHasTheTypeOfItsJavaProperty() throws Exception {
+        List<String> problems = new ArrayList<>();
+        int checked = 0;
+        for (Map.Entry<String, List<TsField>> entry : interfaces().entrySet()) {
+            Map<String, JavaType> java = jsonPropertyTypes(javaType(entry.getKey()));
+            for (TsField field : entry.getValue()) {
+                JavaType type = java.get(field.name());
+                if (type == null || NARROWED_TYPES.contains(entry.getKey() + "." + field.name())) {
+                    continue; // missing ones are reported by the name check
+                }
+                String expected = tsTypeOf(type);
+                String actual = normalizeTs(field.type());
+                if (!expected.equals(actual)) {
+                    problems.add(entry.getKey() + "." + field.name() + ": TS " + field.type() + " vs Java " + expected);
+                }
+                checked++;
+            }
+        }
+        assertThat(problems).isEmpty();
+        assertThat(checked).isGreaterThanOrEqualTo(300);
+    }
+
+    private Map<String, JavaType> jsonPropertyTypes(Class<?> type) {
+        Map<String, JavaType> result = new LinkedHashMap<>();
+        if (type.getSimpleName().endsWith("RequestDto") && type.isRecord()) {
+            for (RecordComponent component : type.getRecordComponents()) {
+                result.put(component.getName(), mapper.constructType(component.getGenericType()));
+            }
+            return result;
+        }
+        BeanDescription description = mapper.getSerializationConfig().introspect(mapper.constructType(type));
+        for (BeanPropertyDefinition property : description.findProperties()) {
+            if (property.couldSerialize()) {
+                result.put(property.getName(), property.getPrimaryType());
+            }
+        }
+        return result;
+    }
+
+    private static String tsTypeOf(JavaType type) {
+        Class<?> raw = type.getRawClass();
+        if (raw == byte[].class || raw == String.class || raw == char.class || raw == Character.class
+                || java.time.temporal.Temporal.class.isAssignableFrom(raw)) {
+            return "string"; // byte[] is base64, Instant ISO-8601 (write-dates-as-timestamps: false)
+        }
+        if (raw == boolean.class || raw == Boolean.class) {
+            return "boolean";
+        }
+        if (raw.isPrimitive() || Number.class.isAssignableFrom(raw)) {
+            return "number";
+        }
+        if (type.isArrayType() || type.isCollectionLikeType()) {
+            String element = tsTypeOf(type.getContentType());
+            return element.matches("[\\w.]+(\\[])*") ? element + "[]" : "(" + element + ")[]";
+        }
+        if (type.isMapLikeType()) {
+            return "Record<" + tsTypeOf(type.getKeyType()) + ", " + tsTypeOf(type.getContentType()) + ">";
+        }
+        String name = JAVA_TYPES.entrySet().stream().filter(e -> e.getValue().equals(raw.getName()))
+                .map(Map.Entry::getKey).findFirst().orElse(raw.getSimpleName());
+        if (type.containedTypeCount() > 0 && !type.containedType(0).getRawClass().equals(Object.class)) {
+            List<String> arguments = new ArrayList<>();
+            for (int i = 0; i < type.containedTypeCount(); i++) {
+                arguments.add(tsTypeOf(type.containedType(i)));
+            }
+            return name + "<" + String.join(", ", arguments) + ">"; // PageDto<ClassStatsDto>
+        }
+        return name;
+    }
+
+    /** Drops {@code | null} and spelling variants: {@code Partial<Record<…>>}, {@code Array<T>}, {@code (T)[]}. */
+    private static String normalizeTs(String ts) {
+        // undefined: a 204 without body (http.ts resolves it to undefined)
+        String s = ts.replace(" | null", "").replace("null | ", "").replace(" | undefined", "").trim();
+        s = s.replaceAll("^Partial<(Record<.*>)>$", "$1");
+        s = s.replaceAll("Array<([\\w.]+)>", "$1[]");
+        s = s.replaceAll("\\(([\\w.]+(?:\\[])*)\\)\\[]", "$1[]");
+        return s;
+    }
+
     record Mapping(String method, String path, Method handler) {
     }
 
@@ -258,8 +350,8 @@ class FrontendContractTest {
                 case "del" -> "DELETE";
                 default -> "POST";
             };
-            String url = call.group(3);
-            String rest = call.group(4);
+            String url = call.group(4);
+            String rest = call.group(5);
             int q = url.indexOf('?');
             String path = normalize(q < 0 ? url : url.substring(0, q));
             Set<String> query = new LinkedHashSet<>();
@@ -315,6 +407,14 @@ class FrontendContractTest {
                     problems.add(verb + " " + path + ": multipart part does not match " + parts);
                 }
             }
+            // the response type the client expects must be what the handler returns
+            if (call.group(2) != null) {
+                String expected = responseTsType(mapping.handler());
+                String actual = normalizeTs(call.group(2));
+                if (expected != null && !expected.equals(actual)) {
+                    problems.add(verb + " " + path + ": client expects " + call.group(2) + ", handler returns " + expected);
+                }
+            }
             Matcher literal = Pattern.compile(",\\s*\\{([^}]*)}\\s*$").matcher(rest);
             if (literal.find() && body != null && body.isRecord()) {
                 Set<String> components = Arrays.stream(body.getRecordComponents()).map(RecordComponent::getName)
@@ -329,6 +429,23 @@ class FrontendContractTest {
         }
         assertThat(problems).isEmpty();
         assertThat(checked).isGreaterThanOrEqualTo(20);
+    }
+
+    /** TS type of a handler's JSON response: ResponseEntity unwrapped, void for no body, null when not JSON. */
+    private String responseTsType(Method handler) {
+        JavaType type = mapper.constructType(handler.getGenericReturnType());
+        if (type.getRawClass() == org.springframework.http.ResponseEntity.class) {
+            type = type.containedTypeOrUnknown(0);
+        }
+        Class<?> raw = type.getRawClass();
+        if (raw == void.class || raw == Void.class) {
+            return "void";
+        }
+        if (raw == Object.class || raw.getName().contains("StreamingResponseBody") || raw == String.class
+                || raw == byte[].class || org.springframework.core.io.Resource.class.isAssignableFrom(raw)) {
+            return null; // downloads and text: not a typed JSON body
+        }
+        return tsTypeOf(type);
     }
 
     @Test

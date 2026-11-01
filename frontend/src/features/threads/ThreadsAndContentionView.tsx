@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { Activity, Camera, Layers, Loader2, RotateCcw, Skull, Trash2, Users } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/api/endpoints';
 import { errorMessage } from '@/api/http';
 import type {
@@ -10,6 +10,7 @@ import type {
   ThreadSeriesSummaryDto,
 } from '@/api/types';
 import { Badge } from '@/components/common/Badge';
+import { useViewActive } from '@/hooks/useViewActive';
 import { EmptyState } from '@/components/common/EmptyState';
 import { FileDropZone } from '@/components/common/FileDropZone';
 import { ToolbarButton } from '@/components/common/ToolbarButton';
@@ -50,11 +51,17 @@ function LiveThreads() {
   const [starting, setStarting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // live sampling: every poll keeps the backend sampler of this pid alive
+  // live sampling: every poll keeps the backend sampler of this pid alive. Paused while the view is hidden, so the
+  // sampler idles out and switches contention monitoring in the target off again; the last picture stays shown.
+  const active = useViewActive();
+  const polledPid = useRef(activePid);
   useEffect(() => {
-    setLive(null);
-    setLiveError(null);
-    if (activePid == null) {
+    if (polledPid.current !== activePid) {
+      polledPid.current = activePid;
+      setLive(null);
+      setLiveError(null);
+    }
+    if (activePid == null || !active) {
       return undefined;
     }
     let cancelled = false;
@@ -77,7 +84,7 @@ function LiveThreads() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [activePid]);
+  }, [activePid, active]);
 
   const refreshSeries = useCallback(async () => {
     try {

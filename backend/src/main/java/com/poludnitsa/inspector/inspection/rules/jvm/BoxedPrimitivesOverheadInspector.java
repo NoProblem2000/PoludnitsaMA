@@ -284,7 +284,7 @@ public class BoxedPrimitivesOverheadInspector implements LeakInspectionRule {
                 long perValue = census.perValueSaving(4);
                 double holding = (double) field.getValue().size() / sampled;
                 long estimated = (long) (count * holding);
-                long saving = (long) (estimated * perValue);
+                long saving = estimated * perValue;
                 if (saving <= 0) {
                     continue;
                 }

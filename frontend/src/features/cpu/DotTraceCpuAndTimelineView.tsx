@@ -19,6 +19,7 @@ import { Badge } from '@/components/common/Badge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ToolbarButton } from '@/components/common/ToolbarButton';
 import { useNow } from '@/hooks/useNow';
+import { useViewActive } from '@/hooks/useViewActive';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { palette } from '@/theme/palette';
 import { formatDuration, formatNumber, formatTime } from '@/utils/format';
@@ -304,13 +305,15 @@ export function DotTraceCpuAndTimelineView() {
     }
   }, []);
 
+  // again on every return to the view: it stays mounted while hidden
+  const active = useViewActive();
   useEffect(() => {
-    if (mode !== 'live') {
+    if (mode !== 'live' || !active) {
       return;
     }
     api.profiles.capabilities().then(setCapabilities, () => setCapabilities(null));
     void refresh();
-  }, [mode, refresh]);
+  }, [mode, active, refresh]);
 
   const pending = profiles.some((p) => p.status === 'RECORDING' || p.status === 'PARSING');
   useEffect(() => {

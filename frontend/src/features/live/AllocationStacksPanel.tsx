@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/api/endpoints';
 import { errorMessage } from '@/api/http';
 import type { AllocationFrameDto, AllocationStacksDto } from '@/api/types';
+import { useViewActive } from '@/hooks/useViewActive';
 import { useInspectorStore } from '@/store/useInspectorStore';
 import { palette } from '@/theme/palette';
 import { formatBytes, formatDuration, formatPercent, splitClassName } from '@/utils/format';
@@ -27,8 +28,9 @@ export function AllocationStacksPanel({ className }: { className: string }) {
   const [starting, setStarting] = useState(false);
   const [openStack, setOpenStack] = useState<number | null>(null);
 
+  const active = useViewActive();
   useEffect(() => {
-    if (pid == null || !jfrActive) {
+    if (pid == null || !jfrActive || !active) {
       return undefined;
     }
     let current = true;
@@ -42,7 +44,7 @@ export function AllocationStacksPanel({ className }: { className: string }) {
       current = false;
       window.clearInterval(timer);
     };
-  }, [pid, jfrActive, className]);
+  }, [pid, jfrActive, className, active]);
 
   if (pid == null) {
     return null;

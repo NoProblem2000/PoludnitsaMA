@@ -478,6 +478,11 @@ export interface ReportExportRequestDto {
   includeDiagnostics?: boolean | null;
 }
 
+export interface SnapshotReport {
+  summary: SnapshotSummaryDto;
+  data: SnapshotDataDto;
+}
+
 export interface SessionReportBundle {
   formatVersion: number;
   reportId: string;
@@ -488,7 +493,7 @@ export interface SessionReportBundle {
   hostName: string;
   process: JvmProcessDto | null;
   metricsHistory: MetricsPointDto[];
-  snapshots: { summary: SnapshotSummaryDto; data: SnapshotDataDto }[];
+  snapshots: SnapshotReport[];
   diffs: SnapshotDiffDto[];
   findings: InspectionFindingDto[];
   /** format 2+: absent in format 1 files */

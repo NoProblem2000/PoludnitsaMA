@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 /** Maps every failure to {@link ApiErrorDto}. */
 @RestControllerAdvice
@@ -46,6 +48,16 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiErrorDto> badRequest(Exception e, HttpServletRequest request) {
         return error(400, "VALIDATION_FAILED", e.getMessage(), request);
+    }
+
+    /** An upload cut short (client aborted, file still being written) is the client's fault, not a 500. */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiErrorDto> badUpload(MultipartException e, HttpServletRequest request) {
+        if (e instanceof MaxUploadSizeExceededException) {
+            return error(413, "UPLOAD_TOO_LARGE", e.getMessage(), request);
+        }
+        Throwable cause = e.getMostSpecificCause();
+        return error(400, "UPLOAD_INCOMPLETE", "Upload could not be read: " + cause.getMessage(), request);
     }
 
     @ExceptionHandler(Exception.class)

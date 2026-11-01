@@ -34,7 +34,7 @@
     </scm>
 
     <!--
-      org-netbeans-lib-profiler RELEASE210 is published to Maven Central (Apache NetBeans releases since 11.x); it
+      org-netbeans-lib-profiler RELEASE220 is published to Maven Central (Apache NetBeans releases since 11.x); it
       resolves from there. The legacy Apache NetBeans repository is declared as a fallback only: it answers
       401 Unauthorized today, and listed first it would be asked for every dependency before Central. Declaring
       "central" explicitly first keeps Central the primary source.
@@ -60,7 +60,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netbeans.version>RELEASE210</netbeans.version>
+        <netbeans.version>RELEASE220</netbeans.version>
         <nashorn.version>15.4</nashorn.version>
         <hazelcast.version>5.3.6</hazelcast.version>
 
